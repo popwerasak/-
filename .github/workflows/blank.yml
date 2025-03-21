@@ -1,0 +1,116 @@
+import React, { useState } from "react";
+
+export default function SalaryIncrementCalculator() {
+  const [salary, setSalary] = useState(0);
+  const [expectedIncrease, setExpectedIncrease] = useState(0);
+  const [education, setEducation] = useState("ปริญญาตรี");
+  const [increment, setIncrement] = useState(0);
+  const [message, setMessage] = useState("");
+
+  const salaryBrackets = {
+    "ปริญญาตรี": [
+      [16500, 19000, 1650, 20440],
+      [19010, 21600, 1430, 22820],
+      [21610, 24200, 1210, 25200],
+      [24210, 26800, 990, 27580],
+      [26810, 29400, 770, 29960],
+      [29410, 32000, 550, 32340],
+      [32010, 34600, 330, 34720],
+      [34610, 37600, 110, 37610]
+    ],
+    "ปริญญาโท": [
+      [19250, 21600, 1930, 23340],
+      [21610, 24000, 1730, 25540],
+      [24010, 26400, 1530, 27740],
+      [26410, 28800, 1330, 29940],
+      [28810, 31200, 1130, 32140],
+      [31210, 33600, 930, 34340],
+      [33610, 36000, 730, 36540],
+      [36010, 38400, 530, 38740],
+      [38410, 40800, 330, 40940],
+      [40810, 43800, 130, 43810]
+    ],
+    "ปวส.": [
+      [12650, 15100, 1270, 16150],
+      [15110, 17600, 1040, 18420],
+      [17610, 20100, 810, 20690],
+      [20110, 22600, 580, 22960],
+      [22610, 25100, 350, 25230],
+      [25110, 27700, 120, 27710]
+    ]
+  };
+
+  const calculateIncrement = () => {
+    let totalSalary = salary + expectedIncrease;
+    let inc = 0;
+    let found = false;
+    if (salaryBrackets[education]) {
+      for (const [min, max, step] of salaryBrackets[education]) {
+        if (totalSalary >= min && totalSalary <= max) {
+          inc = step;
+          found = true;
+          break;
+        }
+      }
+    }
+    setIncrement(inc);
+    setMessage(found ? "" : "ไม่ได้ปรับเพิ่มเงินเดือน");
+  };
+
+  return (
+    <div className="max-w-md mx-auto mt-10 p-6 bg-white shadow-xl rounded-2xl">
+      <h1 className="text-2xl font-bold mb-4 text-center">💰 โปรแกรมการปรับเงินเดือน ข้าราชการพลเรือนสามัญ ครั้งที่ 2</h1>
+      <h2 className="text-md text-center mb-4">(ตามคุณวุฒิของสถานศึกษาในประเทศ)</h2>
+
+      <label className="block mb-2 text-sm font-medium">เลือกวุฒิการศึกษา</label>
+      <select
+        className="w-full p-2 border rounded-xl mb-4"
+        value={education}
+        onChange={(e) => setEducation(e.target.value)}
+      >
+        {Object.keys(salaryBrackets).map((level) => (
+          <option key={level} value={level}>{level}</option>
+        ))}
+      </select>
+
+      <label className="block mb-2 text-sm font-medium">เงินเดือนปัจจุบัน (บาท)</label>
+      <input
+        type="number"
+        className="w-full p-2 border rounded-xl mb-4"
+        value={salary}
+        onChange={(e) => setSalary(Number(e.target.value))}
+      />
+
+      <label className="block mb-2 text-sm font-medium">คาดการณ์เงินเดือนเพิ่ม (บาท)</label>
+      <input
+        type="number"
+        className="w-full p-2 border rounded-xl mb-4"
+        value={expectedIncrease}
+        onChange={(e) => setExpectedIncrease(Number(e.target.value))}
+      />
+
+      <button
+        onClick={calculateIncrement}
+        className="w-full bg-blue-600 text-white py-2 rounded-xl hover:bg-blue-700"
+      >
+        คำนวณ
+      </button>
+
+      {increment > 0 && (
+        <div className="mt-6 p-4 bg-green-100 rounded-xl text-center">
+          <p>🎉 ได้รับการขึ้นเงินเดือน <span className="font-bold">{increment.toLocaleString()} บาท</span></p>
+          <p>💵 เงินเดือนใหม่: <span className="font-bold">{(salary + expectedIncrease + increment).toLocaleString()} บาท</span></p>
+        </div>
+      )}
+      {message && (
+        <div className="mt-6 p-4 bg-red-100 rounded-xl text-center">
+          <p>🚫 {message}</p>
+        </div>
+      )}
+      
+      <div className="text-center mt-4 text-sm text-gray-500">
+        สนับสนุนผู้จัดทำ: <a href="https://s.shopee.co.th/2VdlTWkNZ1" className="text-blue-500 underline">เก็บ Code Shopee ได้ที่นี่</a>
+      </div>
+    </div>
+  );
+}
