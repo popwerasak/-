@@ -3,6 +3,8 @@ name: Build Windows Installer
 on:
   workflow_dispatch:
   push:
+    branches:
+      - claude/pensive-mccarthy-4ko6ba
     tags:
       - "v*"
 
