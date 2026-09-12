@@ -47,13 +47,36 @@ python extractor_gui.py
 4. ถ้าไฟล์มีรหัสผ่าน โปรแกรมจะเด้งกล่องข้อความให้กรอก
 5. เมื่อเสร็จแล้ว กด "เปิดโฟลเดอร์ปลายทาง" เพื่อดูไฟล์ที่แตกออกมา
 
-## การทำเป็นไฟล์ .exe (Windows) แบบไม่ต้องติดตั้ง Python
+## ตัวติดตั้งสำหรับ Windows (Setup.exe)
 
-ถ้าต้องการแจกจ่ายเป็นโปรแกรม .exe เดียวจบ สามารถใช้ [PyInstaller](https://pyinstaller.org/):
+โปรเจกต์นี้มี GitHub Actions workflow (`.github/workflows/build-windows-installer.yml`)
+ที่ build ตัวติดตั้ง Windows (`ExtractZipRarSetup.exe`) ให้อัตโนมัติ โดยใช้ PyInstaller
+รวมโปรแกรมเป็นไฟล์เดียว แล้วใช้ [Inno Setup](https://jrsoftware.org/isinfo.php) ห่อเป็นตัวติดตั้ง
+พร้อมสร้างไอคอน Start Menu / Desktop และมีตัวถอนการติดตั้งให้ในตัว
 
-```bash
+### วิธีดาวน์โหลดตัวติดตั้ง
+
+1. ไปที่แท็บ **Actions** ของ repository บน GitHub
+2. เลือก workflow **"Build Windows Installer"**
+3. กด **"Run workflow"** (เลือก branch แล้วกดรัน) แล้วรอสักครู่ (build บน Windows runner)
+4. เมื่อ build เสร็จ เปิดหน้าผลลัพธ์ของ run แล้วดาวน์โหลดไฟล์แนบชื่อ **ExtractZipRarSetup**
+   (เป็น .zip ที่มี `ExtractZipRarSetup.exe` อยู่ข้างใน) แตกไฟล์แล้วรันได้เลย
+
+หรือถ้า push tag ที่ขึ้นต้นด้วย `v` (เช่น `v1.0.0`) workflow จะสร้าง GitHub Release
+พร้อมแนบไฟล์ `ExtractZipRarSetup.exe` ให้อัตโนมัติ ดาวน์โหลดจากหน้า Releases ได้ทันที
+
+### วิธี build ตัวติดตั้งเองบนเครื่อง Windows (ถ้าไม่อยากใช้ GitHub Actions)
+
+ต้องมี Windows พร้อม Python และ [Inno Setup 6](https://jrsoftware.org/isdl.php) ติดตั้งไว้:
+
+```powershell
 pip install pyinstaller
+pip install -r requirements.txt
 pyinstaller --onefile --windowed --name "ExtractZipRar" extractor_gui.py
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\setup.iss
 ```
 
-ไฟล์ .exe ที่ได้จะอยู่ในโฟลเดอร์ `dist/`
+ไฟล์ตัวติดตั้งที่ได้จะอยู่ที่ `dist_installer\ExtractZipRarSetup.exe`
+
+(ถ้าต้องการแค่ไฟล์ .exe เดี่ยว ไม่ต้องมีตัวติดตั้ง ก็ใช้ไฟล์ที่ได้จากขั้นตอน PyInstaller
+ในโฟลเดอร์ `dist\ExtractZipRar.exe` ได้เลยโดยไม่ต้องรันขั้นตอน Inno Setup)
