@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EngPrax - ฝึกพูดภาษาอังกฤษ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans Thai', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .mic-pulse {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(79, 70, 229, 0); }
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+        }
+
+        .toast-enter { transform: translateY(100%); opacity: 0; }
+        .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s ease-out; }
+        .toast-exit-active { transform: translateY(100%); opacity: 0; transition: all 0.3s ease-in; }
+
+        .dot-flashing {
+            position: relative;
+            width: 8px; height: 8px; border-radius: 5px;
+            background-color: #4f46e5;
+            animation: dot-flashing 1s infinite linear alternate;
+            animation-delay: 0.5s;
+        }
+        .dot-flashing::before, .dot-flashing::after {
+            content: ''; display: inline-block; position: absolute; top: 0;
+            width: 8px; height: 8px; border-radius: 5px; background-color: #4f46e5;
+        }
+        .dot-flashing::before { left: -12px; animation: dot-flashing 1s infinite alternate; animation-delay: 0s; }
+        .dot-flashing::after { left: 12px; animation: dot-flashing 1s infinite alternate; animation-delay: 1s; }
+
+        @keyframes dot-flashing {
+            0% { background-color: #4f46e5; }
+            50%, 100% { background-color: rgba(79, 70, 229, 0.2); }
+        }
+
+        .history-item:hover { background-color: #eef2ff; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-gray-800">
+
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-lg">
+                    <i class="fa-solid fa-language text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold text-gray-900">EngPrax</h1>
+            </div>
+            <div class="text-sm text-gray-500 font-medium" id="engineBadge">AI Speaking Assistant</div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-3xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col h-full">
+
+        <div class="text-center mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">ฝึกพูดภาษาอังกฤษง่ายๆ</h2>
+            <p class="text-gray-600">พูด (หรือพิมพ์) ภาษาไทย แล้ว AI จะแต่งประโยคและพูดภาษาอังกฤษให้ฟัง</p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-lg p-6 mb-6 flex flex-col items-center justify-center relative overflow-hidden transition-all">
+            <button id="micBtn" class="w-24 h-24 bg-indigo-600 rounded-full flex items-center justify-center text-white text-3xl shadow-lg hover:bg-indigo-700 transition-colors focus:outline-none mb-6">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+            <p id="micStatusText" class="text-gray-500 font-medium mb-4 h-6 text-center">แตะไมค์เพื่อพูดภาษาไทย</p>
+
+            <div class="w-full relative mt-2">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-keyboard text-gray-400"></i>
+                </div>
+                <input type="text" id="textInput" placeholder="หรือพิมพ์ประโยคภาษาไทยที่นี่..."
+                    class="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors">
+                <button id="sendTextBtn" class="absolute inset-y-0 right-0 pr-3 flex items-center text-indigo-600 hover:text-indigo-800 focus:outline-none">
+                    <i class="fa-solid fa-paper-plane text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="resultContainer" class="hidden flex-col gap-4">
+            <div class="bg-white rounded-2xl shadow-md p-5 border-l-4 border-gray-300">
+                <div class="flex items-center mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-1 rounded">Thai</span>
+                </div>
+                <p id="thaiOutput" class="text-lg text-gray-800 leading-relaxed"></p>
+            </div>
+
+            <div id="loadingIndicator" class="hidden flex-col items-center justify-center p-8 bg-white rounded-2xl shadow-md">
+                <div class="dot-flashing mb-4 mt-2"></div>
+                <p id="loadingText" class="text-gray-500 text-sm font-medium">กำลังแปลเป็นภาษาอังกฤษ...</p>
+            </div>
+
+            <div id="englishResultCard" class="hidden bg-indigo-50 rounded-2xl shadow-md p-5 border-l-4 border-indigo-500 relative">
+                <div class="flex justify-between items-start mb-3">
+                    <span class="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-100 px-2 py-1 rounded">English</span>
+                    <button id="copyBtn" class="text-indigo-400 hover:text-indigo-600 p-2 rounded-full hover:bg-indigo-100 transition-colors" title="คัดลอกข้อความ">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+
+                <p id="englishOutput" class="text-2xl font-bold text-gray-900 leading-tight mb-6"></p>
+
+                <div class="flex items-center justify-center gap-3 pt-4 border-t border-indigo-100">
+                    <button id="replayBtn" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-full font-medium shadow-md transition-transform transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-volume-high"></i>
+                        <span id="replayBtnText">ฟังซ้ำ</span>
+                    </button>
+                    <select id="rateSelect" class="border border-indigo-200 rounded-full px-3 py-2 text-sm text-indigo-700 bg-white focus:outline-none">
+                        <option value="0.7">พูดช้า</option>
+                        <option value="1" selected>ปกติ</option>
+                        <option value="1.15">พูดเร็ว</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <section class="mt-4">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-gray-500 mb-2">ประวัติที่ฝึกไปแล้ว</h2>
+            <ul id="historyList" class="flex flex-col gap-2"></ul>
+        </section>
+    </main>
+
+    <div id="toast" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-50 pointer-events-none toast-enter">
+        <i id="toastIcon" class="fa-solid fa-info-circle"></i>
+        <span id="toastMessage" class="font-medium"></span>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

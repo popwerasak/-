@@ -1,0 +1,16 @@
+{
+  "name": "english-speaking-coach",
+  "version": "1.0.0",
+  "private": true,
+  "description": "เว็บแอปฝึกพูดภาษาอังกฤษ: พูดภาษาไทยบอกสิ่งที่อยากพูด แล้ว AI แปลและพูดภาษาอังกฤษให้ฟัง",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
