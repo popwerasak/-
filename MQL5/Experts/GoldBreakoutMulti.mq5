@@ -13,19 +13,22 @@
 //|     levels that are at least N bars old (no chasing fresh highs). |
 //|   - Re-entry allowed after break-even exits, but a strategy/side  |
 //|     stops for the day after its first real loss.                  |
-//|   - Early break-even lock, late trailing: winners run to TP.      |
+//|   - Early break-even lock; H1 high/low trailing from entry caps   |
+//|     the wide-SL strategy C loss, winners still run to TP.         |
+//|   - Lot = balance x MaxTotalDD% / sum of all strategies' SL.      |
 //|   - Spread, fake-breakout, Friday and NFP filters.                |
 //+------------------------------------------------------------------+
 #property copyright "GoldBreakoutMulti"
-#property version   "1.20"
+#property version   "1.30"
 
 #include <Trade\Trade.mqh>
 
 //--- enums
 enum ENUM_LOT_MODE
   {
-   LOT_FIXED   = 0, // Fixed lot
-   LOT_RISK    = 1  // Risk % of balance per strategy
+   LOT_FIXED    = 0, // Fixed lot
+   LOT_RISK     = 1, // Risk % of balance per strategy
+   LOT_TOTAL_DD = 2  // Max allowed total drawdown (all SLs hit)
   };
 
 enum ENUM_FAKE_FILTER
@@ -57,10 +60,10 @@ input int              InpMaxLossesDay    = 1;              // Stop strategy & s
 input int              InpMaxSpreadPts    = 500;            // Max allowed spread (points)
 
 input group "=== Lot size ==="
-input ENUM_LOT_MODE    InpLotMode         = LOT_RISK;       // Lot calculation method
+input ENUM_LOT_MODE    InpLotMode         = LOT_TOTAL_DD;     // Lot calculation method
 input double           InpFixedLot        = 0.01;           // Fixed lot / minimum lot
 input double           InpRiskPercent     = 1.0;            // Risk % per strategy (LOT_RISK)
-input double           InpMaxTotalDDPct   = 30.0;           // Stop new trades at total DD % (0=off)
+input double           InpMaxTotalDDPct   = 30.0;           // Max total DD %: lot sizing & stop new trades
 input bool             InpCheckMargin     = true;           // Check free margin before placing
 
 input group "=== Filters ==="
@@ -83,7 +86,7 @@ input group "=== Break-even & trailing stop (High/Low) ==="
 input double           InpBEPct           = 0.25;           // Move SL to break-even at profit (% price, 0=off)
 input double           InpBELockPct       = 0.05;           // Profit locked at break-even (% price)
 input bool             InpUseHLTrail      = true;           // Use High/Low trailing SL
-input ENUM_TIMEFRAMES  InpTrailTF         = PERIOD_M15;     // Trailing timeframe
+input ENUM_TIMEFRAMES  InpTrailTF         = PERIOD_H1;      // Trailing timeframe
 input int              InpTrailBars       = 5;              // Trail on low/high of last N bars
 
 input group "=== Strategy A (breakout, TP 4.1 x SL) ==="
@@ -93,7 +96,7 @@ input int              InpA_Lookback      = 600;            // Lookback bars (si
 input double           InpA_EntryOffset   = 0.0;            // Entry offset from level (% price)
 input double           InpA_SLPct         = 0.50;           // Stop loss (% price)
 input double           InpA_TPPct         = 2.05;           // Take profit (% price)
-input double           InpA_TrailStart    = 1.00;           // Start trailing at profit (% price)
+input double           InpA_TrailStart    = 0.00;           // Start trailing at profit (% price)
 
 input group "=== Strategy B (breakout, TP 4.7 x SL) ==="
 input bool             InpB_Enable        = true;           // Enable
@@ -102,7 +105,7 @@ input int              InpB_Lookback      = 340;            // Lookback bars (si
 input double           InpB_EntryOffset   = 0.0;            // Entry offset from level (% price)
 input double           InpB_SLPct         = 0.35;           // Stop loss (% price)
 input double           InpB_TPPct         = 1.65;           // Take profit (% price)
-input double           InpB_TrailStart    = 0.80;           // Start trailing at profit (% price)
+input double           InpB_TrailStart    = 0.00;           // Start trailing at profit (% price)
 
 input group "=== Strategy C (wide SL, small TP) ==="
 input bool             InpC_Enable        = true;           // Enable
@@ -111,7 +114,7 @@ input int              InpC_Lookback      = 900;            // Lookback bars (si
 input double           InpC_EntryOffset   = 0.0;            // Entry offset from level (% price)
 input double           InpC_SLPct         = 3.00;           // Stop loss (% price)
 input double           InpC_TPPct         = 0.72;           // Take profit (% price)
-input double           InpC_TrailStart    = 0.40;           // Start trailing at profit (% price)
+input double           InpC_TrailStart    = 0.00;           // Start trailing at profit (% price)
 
 //--- strategy table
 struct StratCfg
@@ -368,14 +371,28 @@ double CalcLots(double price, double sl)
    double step    = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
    double lots    = InpFixedLot;
 
-   if(InpLotMode == LOT_RISK)
+   double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
+   if(tickValue <= 0.0) tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
+   double balance   = AccountInfoDouble(ACCOUNT_BALANCE);
+
+   if(InpLotMode == LOT_RISK && tickSize > 0.0)
      {
-      double tickSize  = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
-      double tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE_LOSS);
-      if(tickValue <= 0.0) tickValue = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
       double lossPerLot = MathAbs(price - sl) / tickSize * tickValue;
       if(lossPerLot > 0.0)
-         lots = AccountInfoDouble(ACCOUNT_BALANCE) * InpRiskPercent / 100.0 / lossPerLot;
+         lots = balance * InpRiskPercent / 100.0 / lossPerLot;
+      lots = MathMax(lots, InpFixedLot);
+     }
+   else if(InpLotMode == LOT_TOTAL_DD && tickSize > 0.0 && InpMaxTotalDDPct > 0.0)
+     {
+      // Same lot for every strategy, sized so that all enabled strategies
+      // hitting their full SL together lose MaxTotalDD% of the balance.
+      double sumLoss = 0.0;
+      for(int i = 0; i < STRAT_COUNT; i++)
+         if(g_strat[i].enable)
+            sumLoss += price * g_strat[i].slPct / 100.0 / tickSize * tickValue;
+      if(sumLoss > 0.0)
+         lots = balance * InpMaxTotalDDPct / 100.0 / sumLoss;
       lots = MathMax(lots, InpFixedLot);
      }
 
@@ -420,7 +437,8 @@ void ManageStops()
             curSL = be;
         }
 
-      if(!InpUseHLTrail || gain < open * g_strat[i].trailStart / 100.0) continue;
+      if(!InpUseHLTrail ||
+         (g_strat[i].trailStart > 0.0 && gain < open * g_strat[i].trailStart / 100.0)) continue;
 
       double newSL;
       if(isBuy)
