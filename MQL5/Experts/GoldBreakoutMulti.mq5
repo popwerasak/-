@@ -2,24 +2,24 @@
 //|                                            GoldBreakoutMulti.mq5 |
 //|  Multi-strategy breakout EA for XAUUSD (H1).                      |
 //|                                                                  |
-//|  Rebuilt from observed backtest behaviour (see docs/README):      |
-//|   - 3 sub-strategies, each places BUY STOP at the highest high    |
-//|     and SELL STOP at the lowest low of its own lookback window.   |
-//|   - SL / TP are a percentage of price (not fixed points).         |
-//|       A : SL 0.50%  TP 2.05%  (TP = 4.1  x SL)                    |
-//|       B : SL 0.35%  TP 1.65%  (TP = 4.7  x SL)                    |
-//|       C : SL 3.00%  TP 0.72%  (TP = 0.24 x SL, buy only)          |
-//|   - Orders refreshed once per day (virtual expiry), only on       |
-//|     levels that are at least N bars old (no chasing fresh highs). |
-//|   - Re-entry allowed after break-even exits, but a strategy/side  |
-//|     stops for the day after its first real loss.                  |
-//|   - Early break-even lock; H1 high/low trailing from entry caps   |
-//|     the wide-SL strategy C loss, winners still run to TP.         |
-//|   - Lot = balance x MaxTotalDD% / sum of all strategies' SL.      |
-//|   - Spread, fake-breakout, Friday and NFP filters.                |
+//|  Rebuilt from the original's full Strategy Tester report          |
+//|  (156 trades, 880 orders, 2025.01 - 2026.09), see README:         |
+//|   - 3 sub-strategies place a BUY STOP just under the highest high |
+//|     and a SELL STOP just above the lowest low of the last N D1    |
+//|     bars. SL / TP are a % of the current price:                   |
+//|       A : SL 0.48%  TP 1.98%  lookback 16 days                    |
+//|       B : SL 0.34%  TP 1.62%  lookback 15 days                    |
+//|       C : SL 3.00%  TP 0.72%  lookback 21 days (never trailed)    |
+//|   - Orders refreshed daily and re-armed right after a close.      |
+//|   - Fake-out exit: close a fresh breakout when an M1 bar closes   |
+//|     back through the entry (original never took C's 3% SL).       |
+//|   - Break-even lock per strategy (A +0.05%, B 0%, C +0.06%), then |
+//|     H1 high/low trailing for A and B.                             |
+//|   - Weighted lots: balance x MaxTotalDD% / sum of SLs, C half.    |
+//|   - Spread, Friday and NFP filters.                               |
 //+------------------------------------------------------------------+
 #property copyright "GoldBreakoutMulti"
-#property version   "1.30"
+#property version   "1.40"
 
 #include <Trade\Trade.mqh>
 
@@ -52,22 +52,26 @@ input long             InpMagicBase       = 8000;           // Base magic number
 input string           InpComment         = "GoldBreakout"; // Order comment
 input bool             InpAllowBuy        = true;           // Allow buy trades
 input bool             InpAllowSell       = true;           // Allow sell trades
-input ENUM_TIMEFRAMES  InpSignalTF        = PERIOD_H1;      // Signal timeframe (levels)
+input ENUM_TIMEFRAMES  InpSignalTF        = PERIOD_D1;      // Signal timeframe (levels)
 input ENUM_TIMEFRAMES  InpRefreshTF       = PERIOD_D1;      // Place/move orders once per bar of this TF
-input int              InpMinLevelAge     = 24;             // Level must be >= N signal bars old
-input int              InpMaxTradesDay    = 3;              // Max fills per strategy & side per day
-input int              InpMaxLossesDay    = 1;              // Stop strategy & side for the day after N losses
+input int              InpMinLevelAge     = 0;              // Level must be >= N signal bars old
+input int              InpMaxTradesDay    = 10;             // Max fills per strategy & side per day
+input int              InpMaxLossesDay    = 1;              // Stop strategy & side for the day after N SL losses
 input int              InpMaxSpreadPts    = 500;            // Max allowed spread (points)
 
 input group "=== Lot size ==="
 input ENUM_LOT_MODE    InpLotMode         = LOT_TOTAL_DD;     // Lot calculation method
 input double           InpFixedLot        = 0.01;           // Fixed lot / minimum lot
 input double           InpRiskPercent     = 1.0;            // Risk % per strategy (LOT_RISK)
-input double           InpMaxTotalDDPct   = 30.0;           // Max total DD %: lot sizing & stop new trades
+input double           InpMaxTotalDDPct   = 25.0;           // Max total DD %: lot sizing & stop new trades
 input bool             InpCheckMargin     = true;           // Check free margin before placing
+input double           InpA_LotWeight     = 1.0;            // Lot weight strategy A (LOT_TOTAL_DD)
+input double           InpB_LotWeight     = 1.0;            // Lot weight strategy B (LOT_TOTAL_DD)
+input double           InpC_LotWeight     = 0.5;            // Lot weight strategy C (LOT_TOTAL_DD)
 
 input group "=== Filters ==="
-input ENUM_FAKE_FILTER InpFakeFilter      = FAKE_MEDIUM;    // Fake breakout filter
+input ENUM_FAKE_FILTER InpFakeFilter      = FAKE_MEDIUM;    // Fake-out exit (M1 close back through entry)
+input int              InpFakeMaxMinutes  = 180;            // Fake-out exit only in first N minutes
 input int              InpFridayStopHour  = 25;             // Friday stop hour (broker, 25=off)
 input bool             InpFridayClosePend = true;           // Friday: delete pending orders
 input bool             InpFridayCloseOpen = true;           // Friday: close open trades
@@ -84,7 +88,6 @@ input bool             InpNfpClosePending = true;           // Delete pending or
 
 input group "=== Break-even & trailing stop (High/Low) ==="
 input double           InpBEPct           = 0.25;           // Move SL to break-even at profit (% price, 0=off)
-input double           InpBELockPct       = 0.05;           // Profit locked at break-even (% price)
 input bool             InpUseHLTrail      = true;           // Use High/Low trailing SL
 input ENUM_TIMEFRAMES  InpTrailTF         = PERIOD_H1;      // Trailing timeframe
 input int              InpTrailBars       = 5;              // Trail on low/high of last N bars
@@ -92,29 +95,32 @@ input int              InpTrailBars       = 5;              // Trail on low/high
 input group "=== Strategy A (breakout, TP 4.1 x SL) ==="
 input bool             InpA_Enable        = true;           // Enable
 input ENUM_STRAT_DIR   InpA_Dir           = DIR_BOTH;       // Direction
-input int              InpA_Lookback      = 600;            // Lookback bars (signal TF)
-input double           InpA_EntryOffset   = 0.0;            // Entry offset from level (% price)
-input double           InpA_SLPct         = 0.50;           // Stop loss (% price)
-input double           InpA_TPPct         = 2.05;           // Take profit (% price)
-input double           InpA_TrailStart    = 0.00;           // Start trailing at profit (% price)
+input int              InpA_Lookback      = 16;             // Lookback bars (signal TF)
+input double           InpA_EntryOffset   = -0.08;          // Entry offset from level (% price)
+input double           InpA_SLPct         = 0.48;           // Stop loss (% price)
+input double           InpA_TPPct         = 1.98;           // Take profit (% price)
+input double           InpA_BELockPct     = 0.05;           // Break-even lock (% price)
+input double           InpA_TrailStart    = 0.25;           // Start trailing at profit (% price, <0 = off)
 
 input group "=== Strategy B (breakout, TP 4.7 x SL) ==="
 input bool             InpB_Enable        = true;           // Enable
 input ENUM_STRAT_DIR   InpB_Dir           = DIR_BOTH;       // Direction
-input int              InpB_Lookback      = 340;            // Lookback bars (signal TF)
-input double           InpB_EntryOffset   = 0.0;            // Entry offset from level (% price)
-input double           InpB_SLPct         = 0.35;           // Stop loss (% price)
-input double           InpB_TPPct         = 1.65;           // Take profit (% price)
-input double           InpB_TrailStart    = 0.00;           // Start trailing at profit (% price)
+input int              InpB_Lookback      = 15;             // Lookback bars (signal TF)
+input double           InpB_EntryOffset   = -0.06;          // Entry offset from level (% price)
+input double           InpB_SLPct         = 0.34;           // Stop loss (% price)
+input double           InpB_TPPct         = 1.62;           // Take profit (% price)
+input double           InpB_BELockPct     = 0.00;           // Break-even lock (% price)
+input double           InpB_TrailStart    = 0.25;           // Start trailing at profit (% price, <0 = off)
 
 input group "=== Strategy C (wide SL, small TP) ==="
 input bool             InpC_Enable        = true;           // Enable
-input ENUM_STRAT_DIR   InpC_Dir           = DIR_BUY;        // Direction
-input int              InpC_Lookback      = 900;            // Lookback bars (signal TF)
-input double           InpC_EntryOffset   = 0.0;            // Entry offset from level (% price)
+input ENUM_STRAT_DIR   InpC_Dir           = DIR_BOTH;       // Direction
+input int              InpC_Lookback      = 21;             // Lookback bars (signal TF)
+input double           InpC_EntryOffset   = -0.12;          // Entry offset from level (% price)
 input double           InpC_SLPct         = 3.00;           // Stop loss (% price)
 input double           InpC_TPPct         = 0.72;           // Take profit (% price)
-input double           InpC_TrailStart    = 0.00;           // Start trailing at profit (% price)
+input double           InpC_BELockPct     = 0.06;           // Break-even lock (% price)
+input double           InpC_TrailStart    = -1.0;           // Start trailing at profit (% price, <0 = off)
 
 //--- strategy table
 struct StratCfg
@@ -126,6 +132,8 @@ struct StratCfg
    double            slPct;
    double            tpPct;
    double            trailStart;
+   double            beLock;
+   double            lotWeight;
    long              magic;
    string            name;
   };
@@ -139,7 +147,7 @@ ulong     g_nfpEventId    = 0;
 
 //+------------------------------------------------------------------+
 void SetStrat(int i, bool en, ENUM_STRAT_DIR dir, int lb, double off,
-              double sl, double tp, double ts, string name)
+              double sl, double tp, double ts, double be, double w, string name)
   {
    g_strat[i].enable      = en;
    g_strat[i].dir         = dir;
@@ -148,6 +156,8 @@ void SetStrat(int i, bool en, ENUM_STRAT_DIR dir, int lb, double off,
    g_strat[i].slPct       = sl;
    g_strat[i].tpPct       = tp;
    g_strat[i].trailStart  = ts;
+   g_strat[i].beLock      = be;
+   g_strat[i].lotWeight   = w;
    g_strat[i].magic       = InpMagicBase + i + 1;
    g_strat[i].name        = name;
   }
@@ -156,11 +166,11 @@ void SetStrat(int i, bool en, ENUM_STRAT_DIR dir, int lb, double off,
 int OnInit()
   {
    SetStrat(0, InpA_Enable, InpA_Dir, InpA_Lookback, InpA_EntryOffset,
-            InpA_SLPct, InpA_TPPct, InpA_TrailStart, "A");
+            InpA_SLPct, InpA_TPPct, InpA_TrailStart, InpA_BELockPct, InpA_LotWeight, "A");
    SetStrat(1, InpB_Enable, InpB_Dir, InpB_Lookback, InpB_EntryOffset,
-            InpB_SLPct, InpB_TPPct, InpB_TrailStart, "B");
+            InpB_SLPct, InpB_TPPct, InpB_TrailStart, InpB_BELockPct, InpB_LotWeight, "B");
    SetStrat(2, InpC_Enable, InpC_Dir, InpC_Lookback, InpC_EntryOffset,
-            InpC_SLPct, InpC_TPPct, InpC_TrailStart, "C");
+            InpC_SLPct, InpC_TPPct, InpC_TrailStart, InpC_BELockPct, InpC_LotWeight, "C");
 
    g_trade.SetDeviationInPoints(50);
    g_trade.SetTypeFillingBySymbol(_Symbol);
@@ -307,14 +317,16 @@ void RefreshOrder(int i, bool isBuy, bool allowed)
    // Positive offset = further out, negative = just inside the level.
    double off   = level * g_strat[i].entryOffset / 100.0;
    double price = NormalizeDouble(isBuy ? level + off : level - off, digits);
-   double slD   = price * g_strat[i].slPct / 100.0;
-   double tpD   = price * g_strat[i].tpPct / 100.0;
+   // The original sizes SL/TP from the current price, so the buy and the
+   // sell stop of one strategy get the same distance in dollars.
+   double mid   = (ask + bid) / 2.0;
+   double slD   = mid * g_strat[i].slPct / 100.0;
+   double tpD   = mid * g_strat[i].tpPct / 100.0;
    double sl    = NormalizeDouble(isBuy ? price - slD : price + slD, digits);
    double tp    = NormalizeDouble(isBuy ? price + tpD : price - tpD, digits);
 
-   //--- don't chase: the stop must still be beyond market + fake-breakout distance
-   double minDist = MathMax(stops, price * FakeFilterPct() / 100.0);
-   bool   valid   = isBuy ? (price - ask > minDist) : (bid - price > minDist);
+   //--- don't chase: the stop must still be beyond the market
+   bool   valid   = isBuy ? (price - ask > stops) : (bid - price > stops);
    if(!valid)
      {
       if(ticket > 0) g_trade.OrderDelete(ticket);
@@ -331,7 +343,7 @@ void RefreshOrder(int i, bool isBuy, bool allowed)
       return;
      }
 
-   double lots = CalcLots(price, sl);
+   double lots = CalcLots(i, price, sl);
    if(lots <= 0.0) return;
 
    if(InpCheckMargin)
@@ -356,15 +368,15 @@ double FakeFilterPct()
   {
    switch(InpFakeFilter)
      {
-      case FAKE_LOW:    return(0.05);
-      case FAKE_MEDIUM: return(0.15);
-      case FAKE_HIGH:   return(0.30);
+      case FAKE_LOW:    return(0.06);
+      case FAKE_MEDIUM: return(0.03);
+      case FAKE_HIGH:   return(0.015);
      }
    return(0.0);
   }
 
 //+------------------------------------------------------------------+
-double CalcLots(double price, double sl)
+double CalcLots(int strat, double price, double sl)
   {
    double minLot  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    double maxLot  = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
@@ -392,7 +404,7 @@ double CalcLots(double price, double sl)
          if(g_strat[i].enable)
             sumLoss += price * g_strat[i].slPct / 100.0 / tickSize * tickValue;
       if(sumLoss > 0.0)
-         lots = balance * InpMaxTotalDDPct / 100.0 / sumLoss;
+         lots = balance * InpMaxTotalDDPct / 100.0 / sumLoss * g_strat[strat].lotWeight;
       lots = MathMax(lots, InpFixedLot);
      }
 
@@ -413,6 +425,11 @@ void ManageStops()
    double bid    = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double ask    = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
 
+   static datetime lastM1 = 0;
+   datetime m1   = iTime(_Symbol, PERIOD_M1, 0);
+   bool   newM1  = (m1 != lastM1);
+   lastM1 = m1;
+
    for(int p = PositionsTotal() - 1; p >= 0; p--)
      {
       ulong ticket = PositionGetTicket(p);
@@ -429,7 +446,7 @@ void ManageStops()
       //--- break-even
       if(InpBEPct > 0.0 && gain >= open * InpBEPct / 100.0)
         {
-         double lock = open * InpBELockPct / 100.0;
+         double lock = open * g_strat[i].beLock / 100.0;
          double be   = NormalizeDouble(isBuy ? open + lock : open - lock, digits);
          bool   need = isBuy ? (curSL < be - point && be < bid - stops)
                              : ((curSL == 0.0 || curSL > be + point) && be > ask + stops);
@@ -437,7 +454,21 @@ void ManageStops()
             curSL = be;
         }
 
-      if(!InpUseHLTrail ||
+      //--- fake-out exit: fresh breakout whose M1 bar closed back through the entry
+      if(newM1 && FakeFilterPct() > 0.0 &&
+         TimeCurrent() - (datetime)PositionGetInteger(POSITION_TIME) <= InpFakeMaxMinutes * 60)
+        {
+         bool   atRisk = isBuy ? (curSL < open) : (curSL == 0.0 || curSL > open);
+         double c1     = iClose(_Symbol, PERIOD_M1, 1);
+         double back   = open * FakeFilterPct() / 100.0;
+         if(atRisk && c1 > 0.0 && (isBuy ? c1 < open - back : c1 > open + back))
+           {
+            g_trade.PositionClose(ticket);
+            continue;
+           }
+        }
+
+      if(!InpUseHLTrail || g_strat[i].trailStart < 0.0 ||
          (g_strat[i].trailStart > 0.0 && gain < open * g_strat[i].trailStart / 100.0)) continue;
 
       double newSL;
@@ -554,6 +585,7 @@ bool DayLimitReached(long magic, bool isBuy)
       if(entry == DEAL_ENTRY_IN && buyDeal == isBuy)
          fills++;
       else if(entry == DEAL_ENTRY_OUT && buyDeal != isBuy &&
+              HistoryDealGetInteger(t, DEAL_REASON) == DEAL_REASON_SL &&
               HistoryDealGetDouble(t, DEAL_PROFIT) < 0.0)
          losses++;
      }
