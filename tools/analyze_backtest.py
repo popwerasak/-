@@ -1,6 +1,6 @@
 """Analyze an MT5 tester-graph CSV export and draw report charts.
 
-Usage: python3 tools/analyze_backtest.py data/backtest_equity_2026.csv docs/images
+Usage: python3 tools/analyze_backtest.py data/backtest_equity_2026.csv docs/images [prefix]
 """
 import sys
 import pandas as pd
@@ -11,6 +11,7 @@ import matplotlib.dates as mdates
 
 SRC = sys.argv[1] if len(sys.argv) > 1 else "data/backtest_equity_2026.csv"
 OUT = sys.argv[2] if len(sys.argv) > 2 else "docs/images"
+PREFIX = sys.argv[3] if len(sys.argv) > 3 else ""
 
 BLUE, ORANGE, AQUA, RED = "#2a78d6", "#eb6834", "#1baf7a", "#e34948"
 INK, INK2, GRID, SURF = "#0b0b0b", "#52514e", "#e6e5e0", "#fcfcfb"
@@ -58,13 +59,13 @@ for k, v in stats.items():
 fig, ax = plt.subplots(figsize=(11, 4.2))
 ax.plot(df.date, df.equity, color=AQUA, lw=1.2, label="Equity", drawstyle="steps-post")
 ax.plot(df.date, df.balance, color=BLUE, lw=2, label="Balance", drawstyle="steps-post")
-ax.set_title("Balance & equity - XAUUSD backtest 2026 (start $1,000)")
+ax.set_title(f"Balance & equity - XAUUSD backtest {df.date.iloc[0]:%Y-%m} to {df.date.iloc[-1]:%Y-%m} (start ${start:,.0f})")
 ax.set_ylabel("USD")
 ax.legend(frameon=False, loc="upper left")
 ax.annotate(f"${end:,.2f}", (df.date.iloc[-1], end), xytext=(-60, 8),
             textcoords="offset points", color=INK, fontweight="bold")
-ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
-fig.tight_layout(); fig.savefig(f"{OUT}/01_equity_curve.png", dpi=130); plt.close(fig)
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b" if (df.date.iloc[-1] - df.date.iloc[0]).days < 370 else "%b %y"))
+fig.tight_layout(); fig.savefig(f"{OUT}/{PREFIX}01_equity_curve.png", dpi=130); plt.close(fig)
 
 # 2) drawdown
 fig, ax = plt.subplots(figsize=(11, 2.8))
@@ -72,15 +73,15 @@ ax.fill_between(df.date, dd_pct, 0, step="post", color=RED, alpha=0.25, lw=0)
 ax.plot(df.date, dd_pct, color=RED, lw=1.2, drawstyle="steps-post")
 ax.set_title(f"Equity drawdown from peak (max {dd_pct.min():.2f}%)")
 ax.set_ylabel("%")
-ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
-fig.tight_layout(); fig.savefig(f"{OUT}/02_drawdown.png", dpi=130); plt.close(fig)
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b" if (df.date.iloc[-1] - df.date.iloc[0]).days < 370 else "%b %y"))
+fig.tight_layout(); fig.savefig(f"{OUT}/{PREFIX}02_drawdown.png", dpi=130); plt.close(fig)
 
 # 3) monthly P/L
 m = trades.set_index("date").pnl.resample("MS").sum()
 m = m.add(commission.set_index("date").pnl.resample("MS").sum(), fill_value=0)
-m = m.reindex(pd.date_range("2026-01-01", df.date.max(), freq="MS"), fill_value=0)
+m = m.reindex(pd.date_range(df.date.min().normalize().replace(day=1), df.date.max(), freq="MS"), fill_value=0)
 fig, ax = plt.subplots(figsize=(11, 3.4))
-bars = ax.bar(m.index.strftime("%b"), m.values, width=0.6,
+bars = ax.bar(m.index.strftime("%b" if len(m) <= 12 else "%y-%m"), m.values, width=0.6,
               color=[BLUE if v >= 0 else RED for v in m.values])
 for b, v in zip(bars, m.values):
     ax.annotate(f"{v:+.0f}", (b.get_x() + b.get_width() / 2, v), ha="center",
@@ -89,7 +90,9 @@ for b, v in zip(bars, m.values):
 ax.axhline(0, color=INK2, lw=0.8)
 ax.set_title("Net P/L per month (USD)")
 ax.grid(axis="x", visible=False)
-fig.tight_layout(); fig.savefig(f"{OUT}/03_monthly_pnl.png", dpi=130); plt.close(fig)
+if len(m) > 12:
+    ax.tick_params(axis="x", labelrotation=45, labelsize=8)
+fig.tight_layout(); fig.savefig(f"{OUT}/{PREFIX}03_monthly_pnl.png", dpi=130); plt.close(fig)
 
 # 4) distribution of deal results
 fig, ax = plt.subplots(figsize=(11, 3.4))
@@ -99,7 +102,7 @@ ax.axhline(0, color=INK2, lw=0.8)
 ax.set_title("Each closed deal (USD) - small losses, occasional large breakout wins")
 ax.set_xlabel("Deal #")
 ax.grid(axis="x", visible=False)
-fig.tight_layout(); fig.savefig(f"{OUT}/04_deal_results.png", dpi=130); plt.close(fig)
+fig.tight_layout(); fig.savefig(f"{OUT}/{PREFIX}04_deal_results.png", dpi=130); plt.close(fig)
 
 # 5) hour of day of exits (broker time)
 h = trades.date.dt.hour.value_counts().reindex(range(24), fill_value=0)
@@ -108,4 +111,16 @@ ax.bar(h.index, h.values, width=0.7, color=BLUE)
 ax.set_xticks(range(24))
 ax.set_title("Hour of deal close (broker time) - activity clusters around the daily open")
 ax.grid(axis="x", visible=False)
-fig.tight_layout(); fig.savefig(f"{OUT}/05_close_hour.png", dpi=130); plt.close(fig)
+fig.tight_layout(); fig.savefig(f"{OUT}/{PREFIX}05_close_hour.png", dpi=130); plt.close(fig)
+
+# 6) where deals exit: P/L histogram in USD
+fig, ax = plt.subplots(figsize=(11, 3.4))
+bins = [-80, -50, -30, -20, -10, -5, -1, 1, 5, 10, 20, 30, 50, 80, 170]
+cnt = pd.cut(trades.pnl, bins).value_counts().sort_index()
+labels = [f"{int(i.left)}..{int(i.right)}" for i in cnt.index]
+ax.bar(labels, cnt.values, width=0.7,
+       color=[RED if i.right <= -1 else INK2 if i.right <= 1 else BLUE for i in cnt.index])
+ax.set_title("Closed deals by P/L (USD)")
+ax.tick_params(axis="x", labelsize=8)
+ax.grid(axis="x", visible=False)
+fig.tight_layout(); fig.savefig(f"{OUT}/{PREFIX}06_pnl_histogram.png", dpi=130); plt.close(fig)

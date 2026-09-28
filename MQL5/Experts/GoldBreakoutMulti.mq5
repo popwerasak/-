@@ -10,13 +10,14 @@
 //|       B : SL 0.35%  TP 1.65%  (TP = 4.7  x SL)                    |
 //|       C : SL 3.00%  TP 0.72%  (TP = 0.24 x SL, buy only)          |
 //|   - Orders refreshed once per day (virtual expiry), only on       |
-//|     levels that are at least N bars old, max 1 fill per strategy  |
-//|     and side per day (stops chasing fresh highs in a trend).      |
-//|   - Break-even, then trailing SL on high/low of lower-TF bars.    |
+//|     levels that are at least N bars old (no chasing fresh highs). |
+//|   - Re-entry allowed after break-even exits, but a strategy/side  |
+//|     stops for the day after its first real loss.                  |
+//|   - Early break-even lock, late trailing: winners run to TP.      |
 //|   - Spread, fake-breakout, Friday and NFP filters.                |
 //+------------------------------------------------------------------+
 #property copyright "GoldBreakoutMulti"
-#property version   "1.10"
+#property version   "1.20"
 
 #include <Trade\Trade.mqh>
 
@@ -51,7 +52,8 @@ input bool             InpAllowSell       = true;           // Allow sell trades
 input ENUM_TIMEFRAMES  InpSignalTF        = PERIOD_H1;      // Signal timeframe (levels)
 input ENUM_TIMEFRAMES  InpRefreshTF       = PERIOD_D1;      // Place/move orders once per bar of this TF
 input int              InpMinLevelAge     = 24;             // Level must be >= N signal bars old
-input int              InpMaxTradesDay    = 1;              // Max fills per strategy & side per day
+input int              InpMaxTradesDay    = 3;              // Max fills per strategy & side per day
+input int              InpMaxLossesDay    = 1;              // Stop strategy & side for the day after N losses
 input int              InpMaxSpreadPts    = 500;            // Max allowed spread (points)
 
 input group "=== Lot size ==="
@@ -78,11 +80,11 @@ input bool             InpNfpCloseOpen    = true;           // Close open trades
 input bool             InpNfpClosePending = true;           // Delete pending orders before NFP
 
 input group "=== Break-even & trailing stop (High/Low) ==="
-input double           InpBEPct           = 0.15;           // Move SL to break-even at profit (% price, 0=off)
-input double           InpBELockPct       = 0.02;           // Profit locked at break-even (% price)
+input double           InpBEPct           = 0.25;           // Move SL to break-even at profit (% price, 0=off)
+input double           InpBELockPct       = 0.05;           // Profit locked at break-even (% price)
 input bool             InpUseHLTrail      = true;           // Use High/Low trailing SL
-input ENUM_TIMEFRAMES  InpTrailTF         = PERIOD_M5;      // Trailing timeframe
-input int              InpTrailBars       = 3;              // Trail on low/high of last N bars
+input ENUM_TIMEFRAMES  InpTrailTF         = PERIOD_M15;     // Trailing timeframe
+input int              InpTrailBars       = 5;              // Trail on low/high of last N bars
 
 input group "=== Strategy A (breakout, TP 4.1 x SL) ==="
 input bool             InpA_Enable        = true;           // Enable
@@ -91,7 +93,7 @@ input int              InpA_Lookback      = 600;            // Lookback bars (si
 input double           InpA_EntryOffset   = 0.0;            // Entry offset from level (% price)
 input double           InpA_SLPct         = 0.50;           // Stop loss (% price)
 input double           InpA_TPPct         = 2.05;           // Take profit (% price)
-input double           InpA_TrailStart    = 0.20;           // Start trailing at profit (% price)
+input double           InpA_TrailStart    = 1.00;           // Start trailing at profit (% price)
 
 input group "=== Strategy B (breakout, TP 4.7 x SL) ==="
 input bool             InpB_Enable        = true;           // Enable
@@ -100,7 +102,7 @@ input int              InpB_Lookback      = 340;            // Lookback bars (si
 input double           InpB_EntryOffset   = 0.0;            // Entry offset from level (% price)
 input double           InpB_SLPct         = 0.35;           // Stop loss (% price)
 input double           InpB_TPPct         = 1.65;           // Take profit (% price)
-input double           InpB_TrailStart    = 0.20;           // Start trailing at profit (% price)
+input double           InpB_TrailStart    = 0.80;           // Start trailing at profit (% price)
 
 input group "=== Strategy C (wide SL, small TP) ==="
 input bool             InpC_Enable        = true;           // Enable
@@ -109,7 +111,7 @@ input int              InpC_Lookback      = 900;            // Lookback bars (si
 input double           InpC_EntryOffset   = 0.0;            // Entry offset from level (% price)
 input double           InpC_SLPct         = 3.00;           // Stop loss (% price)
 input double           InpC_TPPct         = 0.72;           // Take profit (% price)
-input double           InpC_TrailStart    = 0.15;           // Start trailing at profit (% price)
+input double           InpC_TrailStart    = 0.40;           // Start trailing at profit (% price)
 
 //--- strategy table
 struct StratCfg
@@ -216,6 +218,13 @@ void OnTick()
 
    ManageStops();
 
+   //--- a position just closed: re-arm its strategy now instead of waiting a day
+   static int lastOpen = 0;
+   int openNow = CountOurPositions();
+   if(openNow < lastOpen)
+      g_lastRefreshBar = 0;
+   lastOpen = openNow;
+
    //--- refresh orders once per refresh bar, or immediately after a block lifts
    datetime bar = iTime(_Symbol, InpRefreshTF, 0);
    if(blockNew)
@@ -253,7 +262,7 @@ void RefreshOrder(int i, bool isBuy, bool allowed)
 
    //--- one trade per strategy and side at a time, limited fills per day
    if(!allowed || HasPosition(magic, isBuy ? POSITION_TYPE_BUY : POSITION_TYPE_SELL) ||
-      (InpMaxTradesDay > 0 && FillsToday(magic, isBuy) >= InpMaxTradesDay))
+      DayLimitReached(magic, isBuy))
      {
       if(ticket > 0) g_trade.OrderDelete(ticket);
       return;
@@ -501,22 +510,47 @@ ulong FindPending(long magic, ENUM_ORDER_TYPE type)
    return(0);
   }
 
-int FillsToday(long magic, bool isBuy)
+//+------------------------------------------------------------------+
+//| Today's fills and losing exits for one strategy & side            |
+//+------------------------------------------------------------------+
+bool DayLimitReached(long magic, bool isBuy)
   {
+   if(InpMaxTradesDay <= 0 && InpMaxLossesDay <= 0)
+      return(false);
    MqlDateTime d;
    TimeToStruct(TimeCurrent(), d);
    d.hour = 0; d.min = 0; d.sec = 0;
    if(!HistorySelect(StructToTime(d), TimeCurrent() + 60))
-      return(0);
-   int n = 0;
+      return(false);
+   int fills = 0, losses = 0;
    for(int k = HistoryDealsTotal() - 1; k >= 0; k--)
      {
       ulong t = HistoryDealGetTicket(k);
       if(t == 0) continue;
-      if(HistoryDealGetString(t, DEAL_SYMBOL) == _Symbol &&
-         HistoryDealGetInteger(t, DEAL_MAGIC) == magic &&
-         HistoryDealGetInteger(t, DEAL_ENTRY) == DEAL_ENTRY_IN &&
-         (HistoryDealGetInteger(t, DEAL_TYPE) == DEAL_TYPE_BUY) == isBuy)
+      if(HistoryDealGetString(t, DEAL_SYMBOL) != _Symbol ||
+         HistoryDealGetInteger(t, DEAL_MAGIC) != magic)
+         continue;
+      bool buyDeal = HistoryDealGetInteger(t, DEAL_TYPE) == DEAL_TYPE_BUY;
+      long entry   = HistoryDealGetInteger(t, DEAL_ENTRY);
+      // A buy position is opened by a buy deal and closed by a sell deal.
+      if(entry == DEAL_ENTRY_IN && buyDeal == isBuy)
+         fills++;
+      else if(entry == DEAL_ENTRY_OUT && buyDeal != isBuy &&
+              HistoryDealGetDouble(t, DEAL_PROFIT) < 0.0)
+         losses++;
+     }
+   return((InpMaxTradesDay > 0 && fills >= InpMaxTradesDay) ||
+          (InpMaxLossesDay > 0 && losses >= InpMaxLossesDay));
+  }
+
+int CountOurPositions()
+  {
+   int n = 0;
+   for(int k = PositionsTotal() - 1; k >= 0; k--)
+     {
+      ulong t = PositionGetTicket(k);
+      if(t == 0) continue;
+      if(PositionGetString(POSITION_SYMBOL) == _Symbol && IsOurMagic(PositionGetInteger(POSITION_MAGIC)))
          n++;
      }
    return(n);
