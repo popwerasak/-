@@ -2,24 +2,23 @@
 //|                                            GoldBreakoutMulti.mq5 |
 //|  Multi-strategy breakout EA for XAUUSD (H1).                      |
 //|                                                                  |
-//|  Rebuilt from the original's full Strategy Tester report          |
-//|  (156 trades, 880 orders, 2025.01 - 2026.09), see README:         |
-//|   - 3 sub-strategies place a BUY STOP just under the highest high |
-//|     and a SELL STOP just above the lowest low of the last N D1    |
-//|     bars. SL / TP are a % of the current price:                   |
-//|       A : SL 0.48%  TP 1.98%  lookback 16 days                    |
-//|       B : SL 0.34%  TP 1.62%  lookback 15 days                    |
-//|       C : SL 3.00%  TP 0.72%  lookback 21 days (never trailed)    |
-//|   - Orders refreshed daily and re-armed right after a close.      |
-//|   - Fake-out exit: close a fresh breakout when an M1 bar closes   |
-//|     back through the entry (original never took C's 3% SL).       |
-//|   - Break-even lock per strategy (A +0.05%, B 0%, C +0.06%), then |
-//|     H1 high/low trailing for A and B.                             |
-//|   - Weighted lots: balance x MaxTotalDD% / sum of SLs, C half.    |
-//|   - Spread, Friday and NFP filters.                               |
+//|  Rebuilt from the original's full Strategy Tester report plus    |
+//|  XAUUSD H1 history (2025.01 - 2026.09), see README:               |
+//|   - Entry levels are D1 Bill Williams fractals (2 bars each side, |
+//|     confirmed 2 days later):                                      |
+//|       A, B : the most recent up / down fractal                    |
+//|       C    : the highest up / lowest down fractal of 40 days      |
+//|     Stop order sits just inside the level (per-direction offset). |
+//|     Matched 43/43 B buys, 32/35 B sells, 25/27 A buys.            |
+//|   - SL / TP % of the current price:                               |
+//|       A 0.48 / 1.98   B 0.34 / 1.62   C 3.00 / 0.72               |
+//|   - Orders kept until filled or cancelled (NFP), re-armed at the  |
+//|     same level after a close.                                     |
+//|   - Fake-out exit, per-strategy break-even lock, H1 HL trailing   |
+//|     for A and B, weighted lots.                                   |
 //+------------------------------------------------------------------+
 #property copyright "GoldBreakoutMulti"
-#property version   "1.40"
+#property version   "1.50"
 
 #include <Trade\Trade.mqh>
 
@@ -39,6 +38,13 @@ enum ENUM_FAKE_FILTER
    FAKE_HIGH   = 3  // High
   };
 
+enum ENUM_LEVEL_MODE
+  {
+   LEVEL_RECENT_FRACTAL  = 0, // Most recent D1 fractal
+   LEVEL_EXTREME_FRACTAL = 1, // Highest/lowest D1 fractal in lookback
+   LEVEL_DONCHIAN        = 2  // Highest high / lowest low in lookback
+  };
+
 enum ENUM_STRAT_DIR
   {
    DIR_BOTH = 0, // Buy & Sell
@@ -52,9 +58,9 @@ input long             InpMagicBase       = 8000;           // Base magic number
 input string           InpComment         = "GoldBreakout"; // Order comment
 input bool             InpAllowBuy        = true;           // Allow buy trades
 input bool             InpAllowSell       = true;           // Allow sell trades
-input ENUM_TIMEFRAMES  InpSignalTF        = PERIOD_D1;      // Signal timeframe (levels)
+input ENUM_TIMEFRAMES  InpSignalTF        = PERIOD_D1;      // Level timeframe (fractals)
+input int              InpFractalBars     = 2;              // Fractal: bars on each side
 input ENUM_TIMEFRAMES  InpRefreshTF       = PERIOD_D1;      // Place/move orders once per bar of this TF
-input int              InpMinLevelAge     = 0;              // Level must be >= N signal bars old
 input int              InpMaxTradesDay    = 10;             // Max fills per strategy & side per day
 input int              InpMaxLossesDay    = 1;              // Stop strategy & side for the day after N SL losses
 input int              InpMaxSpreadPts    = 500;            // Max allowed spread (points)
@@ -70,7 +76,7 @@ input double           InpB_LotWeight     = 1.0;            // Lot weight strate
 input double           InpC_LotWeight     = 0.5;            // Lot weight strategy C (LOT_TOTAL_DD)
 
 input group "=== Filters ==="
-input ENUM_FAKE_FILTER InpFakeFilter      = FAKE_MEDIUM;    // Fake-out exit (M1 close back through entry)
+input ENUM_FAKE_FILTER InpFakeFilter      = FAKE_MEDIUM;    // Fake-out exit: M1 close back past entry (Low .10% / Med .06% / High .03%)
 input int              InpFakeMaxMinutes  = 180;            // Fake-out exit only in first N minutes
 input int              InpFridayStopHour  = 25;             // Friday stop hour (broker, 25=off)
 input bool             InpFridayClosePend = true;           // Friday: delete pending orders
@@ -95,8 +101,10 @@ input int              InpTrailBars       = 5;              // Trail on low/high
 input group "=== Strategy A (breakout, TP 4.1 x SL) ==="
 input bool             InpA_Enable        = true;           // Enable
 input ENUM_STRAT_DIR   InpA_Dir           = DIR_BOTH;       // Direction
-input int              InpA_Lookback      = 16;             // Lookback bars (signal TF)
-input double           InpA_EntryOffset   = -0.08;          // Entry offset from level (% price)
+input ENUM_LEVEL_MODE   InpA_LevelMode     = LEVEL_RECENT_FRACTAL;// Entry level
+input int              InpA_Lookback      = 60;               // Lookback (D1 bars)
+input double           InpA_OffsetBuy     = -0.081;           // Buy stop offset from level (% price, - = inside)
+input double           InpA_OffsetSell    = -0.036;           // Sell stop offset from level (% price, - = inside)
 input double           InpA_SLPct         = 0.48;           // Stop loss (% price)
 input double           InpA_TPPct         = 1.98;           // Take profit (% price)
 input double           InpA_BELockPct     = 0.05;           // Break-even lock (% price)
@@ -105,8 +113,10 @@ input double           InpA_TrailStart    = 0.25;           // Start trailing at
 input group "=== Strategy B (breakout, TP 4.7 x SL) ==="
 input bool             InpB_Enable        = true;           // Enable
 input ENUM_STRAT_DIR   InpB_Dir           = DIR_BOTH;       // Direction
-input int              InpB_Lookback      = 15;             // Lookback bars (signal TF)
-input double           InpB_EntryOffset   = -0.06;          // Entry offset from level (% price)
+input ENUM_LEVEL_MODE   InpB_LevelMode     = LEVEL_RECENT_FRACTAL;// Entry level
+input int              InpB_Lookback      = 60;               // Lookback (D1 bars)
+input double           InpB_OffsetBuy     = -0.064;           // Buy stop offset from level (% price, - = inside)
+input double           InpB_OffsetSell    = -0.061;           // Sell stop offset from level (% price, - = inside)
 input double           InpB_SLPct         = 0.34;           // Stop loss (% price)
 input double           InpB_TPPct         = 1.62;           // Take profit (% price)
 input double           InpB_BELockPct     = 0.00;           // Break-even lock (% price)
@@ -115,8 +125,10 @@ input double           InpB_TrailStart    = 0.25;           // Start trailing at
 input group "=== Strategy C (wide SL, small TP) ==="
 input bool             InpC_Enable        = true;           // Enable
 input ENUM_STRAT_DIR   InpC_Dir           = DIR_BOTH;       // Direction
-input int              InpC_Lookback      = 21;             // Lookback bars (signal TF)
-input double           InpC_EntryOffset   = -0.12;          // Entry offset from level (% price)
+input ENUM_LEVEL_MODE   InpC_LevelMode     = LEVEL_EXTREME_FRACTAL;// Entry level
+input int              InpC_Lookback      = 40;               // Lookback (D1 bars)
+input double           InpC_OffsetBuy     = -0.128;           // Buy stop offset from level (% price, - = inside)
+input double           InpC_OffsetSell    = -0.081;           // Sell stop offset from level (% price, - = inside)
 input double           InpC_SLPct         = 3.00;           // Stop loss (% price)
 input double           InpC_TPPct         = 0.72;           // Take profit (% price)
 input double           InpC_BELockPct     = 0.06;           // Break-even lock (% price)
@@ -127,8 +139,10 @@ struct StratCfg
   {
    bool              enable;
    ENUM_STRAT_DIR    dir;
+   ENUM_LEVEL_MODE   levelMode;
    int               lookback;
-   double            entryOffset;
+   double            offBuy;
+   double            offSell;
    double            slPct;
    double            tpPct;
    double            trailStart;
@@ -146,13 +160,16 @@ string    g_peakVar;
 ulong     g_nfpEventId    = 0;
 
 //+------------------------------------------------------------------+
-void SetStrat(int i, bool en, ENUM_STRAT_DIR dir, int lb, double off,
+void SetStrat(int i, bool en, ENUM_STRAT_DIR dir, ENUM_LEVEL_MODE mode, int lb,
+              double offBuy, double offSell,
               double sl, double tp, double ts, double be, double w, string name)
   {
    g_strat[i].enable      = en;
    g_strat[i].dir         = dir;
+   g_strat[i].levelMode   = mode;
    g_strat[i].lookback    = MathMax(lb, 2);
-   g_strat[i].entryOffset = off;
+   g_strat[i].offBuy      = offBuy;
+   g_strat[i].offSell     = offSell;
    g_strat[i].slPct       = sl;
    g_strat[i].tpPct       = tp;
    g_strat[i].trailStart  = ts;
@@ -165,11 +182,14 @@ void SetStrat(int i, bool en, ENUM_STRAT_DIR dir, int lb, double off,
 //+------------------------------------------------------------------+
 int OnInit()
   {
-   SetStrat(0, InpA_Enable, InpA_Dir, InpA_Lookback, InpA_EntryOffset,
+   SetStrat(0, InpA_Enable, InpA_Dir, InpA_LevelMode, InpA_Lookback,
+            InpA_OffsetBuy, InpA_OffsetSell,
             InpA_SLPct, InpA_TPPct, InpA_TrailStart, InpA_BELockPct, InpA_LotWeight, "A");
-   SetStrat(1, InpB_Enable, InpB_Dir, InpB_Lookback, InpB_EntryOffset,
+   SetStrat(1, InpB_Enable, InpB_Dir, InpB_LevelMode, InpB_Lookback,
+            InpB_OffsetBuy, InpB_OffsetSell,
             InpB_SLPct, InpB_TPPct, InpB_TrailStart, InpB_BELockPct, InpB_LotWeight, "B");
-   SetStrat(2, InpC_Enable, InpC_Dir, InpC_Lookback, InpC_EntryOffset,
+   SetStrat(2, InpC_Enable, InpC_Dir, InpC_LevelMode, InpC_Lookback,
+            InpC_OffsetBuy, InpC_OffsetSell,
             InpC_SLPct, InpC_TPPct, InpC_TrailStart, InpC_BELockPct, InpC_LotWeight, "C");
 
    g_trade.SetDeviationInPoints(50);
@@ -287,35 +307,12 @@ void RefreshOrder(int i, bool isBuy, bool allowed)
    double bid    = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double stops  = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * point;
 
-   //--- channel level of the closed bars
-   int    lb = g_strat[i].lookback;
-   double level;
-   if(isBuy)
-     {
-      int idx = iHighest(_Symbol, InpSignalTF, MODE_HIGH, lb, 1);
-      if(idx < 0) return;
-      if(idx < InpMinLevelAge)
-        {
-         if(ticket > 0) g_trade.OrderDelete(ticket);
-         return;
-        }
-      level = iHigh(_Symbol, InpSignalTF, idx);
-     }
-   else
-     {
-      int idx = iLowest(_Symbol, InpSignalTF, MODE_LOW, lb, 1);
-      if(idx < 0) return;
-      if(idx < InpMinLevelAge)
-        {
-         if(ticket > 0) g_trade.OrderDelete(ticket);
-         return;
-        }
-      level = iLow(_Symbol, InpSignalTF, idx);
-     }
+   //--- entry level: D1 fractal (or channel) of the closed bars
+   double level = GetLevel(i, isBuy);
    if(level <= 0.0) return;
 
    // Positive offset = further out, negative = just inside the level.
-   double off   = level * g_strat[i].entryOffset / 100.0;
+   double off   = level * (isBuy ? g_strat[i].offBuy : g_strat[i].offSell) / 100.0;
    double price = NormalizeDouble(isBuy ? level + off : level - off, digits);
    // The original sizes SL/TP from the current price, so the buy and the
    // sell stop of one strategy get the same distance in dollars.
@@ -364,13 +361,62 @@ void RefreshOrder(int i, bool isBuy, bool allowed)
   }
 
 //+------------------------------------------------------------------+
+//| Bill Williams fractal on the level timeframe: bar sh is higher    |
+//| (lower) than k older bars and strictly higher (lower) than the k  |
+//| newer bars, which must all be closed.                             |
+//+------------------------------------------------------------------+
+bool IsFractal(int sh, bool up, int k)
+  {
+   double v = up ? iHigh(_Symbol, InpSignalTF, sh) : iLow(_Symbol, InpSignalTF, sh);
+   if(v <= 0.0) return(false);
+   for(int j = 1; j <= k; j++)
+     {
+      double newer = up ? iHigh(_Symbol, InpSignalTF, sh - j) : iLow(_Symbol, InpSignalTF, sh - j);
+      double older = up ? iHigh(_Symbol, InpSignalTF, sh + j) : iLow(_Symbol, InpSignalTF, sh + j);
+      if(newer <= 0.0 || older <= 0.0) return(false);
+      if(up  && (newer >= v || older > v)) return(false);
+      if(!up && (newer <= v || older < v)) return(false);
+     }
+   return(true);
+  }
+
+//+------------------------------------------------------------------+
+//| Level a strategy trades: recent / extreme fractal or channel      |
+//+------------------------------------------------------------------+
+double GetLevel(int i, bool isBuy)
+  {
+   int lb = g_strat[i].lookback;
+   if(g_strat[i].levelMode == LEVEL_DONCHIAN)
+     {
+      int idx = isBuy ? iHighest(_Symbol, InpSignalTF, MODE_HIGH, lb, 1)
+                      : iLowest(_Symbol, InpSignalTF, MODE_LOW, lb, 1);
+      if(idx < 0) return(0.0);
+      return(isBuy ? iHigh(_Symbol, InpSignalTF, idx) : iLow(_Symbol, InpSignalTF, idx));
+     }
+
+   int    k    = MathMax(InpFractalBars, 1);
+   double best = 0.0;
+   // Bar 0 is still forming, so the newest confirmable fractal is bar k+1.
+   for(int sh = k + 1; sh <= lb + k; sh++)
+     {
+      if(!IsFractal(sh, isBuy, k)) continue;
+      double v = isBuy ? iHigh(_Symbol, InpSignalTF, sh) : iLow(_Symbol, InpSignalTF, sh);
+      if(g_strat[i].levelMode == LEVEL_RECENT_FRACTAL)
+         return(v);
+      if(best == 0.0 || (isBuy ? v > best : v < best))
+         best = v;
+     }
+   return(best);
+  }
+
+//+------------------------------------------------------------------+
 double FakeFilterPct()
   {
    switch(InpFakeFilter)
      {
-      case FAKE_LOW:    return(0.06);
-      case FAKE_MEDIUM: return(0.03);
-      case FAKE_HIGH:   return(0.015);
+      case FAKE_LOW:    return(0.10);
+      case FAKE_MEDIUM: return(0.06);
+      case FAKE_HIGH:   return(0.03);
      }
    return(0.0);
   }
