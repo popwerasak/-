@@ -2,8 +2,8 @@
 
 EA ตัวเดียวที่พัฒนาต่อในโปรเจกต์นี้ใช้ **เวอร์ชันของผู้ใช้เป็นฐาน** (ผล backtest ดีที่สุด) แล้วเพิ่ม/ปรับทีละข้อจากข้อมูลจริง
 
-- EA: [`MQL5/Experts/GoldBreakoutMulti.mq5`](MQL5/Experts/GoldBreakoutMulti.mq5) (v2.10)
-- Preset: [`MQL5/Presets/GoldBreakoutMulti_v210.set`](MQL5/Presets/GoldBreakoutMulti_v210.set) ใช้ Load ใน Strategy Tester เพื่อกัน MT5 จำค่า input เก่า
+- EA: [`MQL5/Experts/GoldBreakoutMulti.mq5`](MQL5/Experts/GoldBreakoutMulti.mq5) (v2.00)
+- Preset: [`MQL5/Presets/GoldBreakoutMulti_v200.set`](MQL5/Presets/GoldBreakoutMulti_v200.set) ใช้ Load ใน Strategy Tester เพื่อกัน MT5 จำค่า input เก่า
 - ข้อมูล: `data/` (รายงาน backtest, กราฟ balance, ราคา XAUUSD H1 ที่ผู้ใช้ส่งมา)
 - เครื่องมือวิเคราะห์: `tools/`
 
@@ -57,7 +57,7 @@ EA ตัวเดียวที่พัฒนาต่อในโปรเ�
 
 ## วิธีเทส
 1. คัดลอก `MQL5/Experts/GoldBreakoutMulti.mq5` ไปที่ `MQL5/Experts/` ของ MT5 แล้ว Compile
-2. คัดลอก `MQL5/Presets/GoldBreakoutMulti_v210.set` ไปที่ `MQL5/Presets/`
+2. คัดลอก `MQL5/Presets/GoldBreakoutMulti_v200.set` ไปที่ `MQL5/Presets/`
 3. Strategy Tester: XAUUSD, **M15**, 2025.01.01 – 2026.09.28, Every tick based on real ticks
 4. แท็บ Inputs → คลิกขวา → **Load** → เลือกไฟล์ `.set`
 5. เทียบกับฐาน: ตั้ง `InpParaEnable=false` จะได้ผลเท่ากับเวอร์ชันฐาน
@@ -73,32 +73,10 @@ EA ตัวเดียวที่พัฒนาต่อในโปรเ�
 | ชนะ | 81% | 82% |
 | Max equity DD | 14.25% | 17.11% |
 
-## v2.10: ช่วง ก.พ.–ก.ย. 2026 พอร์ตไม่โต
+## ทดลอง v2.10 (ยกเลิกแล้ว): ปรับ break-even/trailing ตาม ATR
 
 ![2026 break-even exits](docs/images/2026_break_even_exits.png)
 
-**สาเหตุ:** ไม้ชนะเล็กลงครึ่งหนึ่ง แต่ไม้แพ้ยังเท่าเดิม
-
-| | ม.ค. 2025 – ม.ค. 2026 | ก.พ. – ก.ย. 2026 |
-|---|---|---|
-| อัตราชนะ | 80% | 85% |
-| ไม้ชนะเฉลี่ย (% ราคา) | +0.199% | **+0.098%** (มัธยฐาน +0.019%) |
-| ไม้แพ้เฉลี่ย (% ราคา) | −0.376% | −0.394% |
-| ไม้ชนะที่ออกตรงจุด break-even lock (+0.02%) | 38% | **78%** |
-| ATR H1 (มัธยฐาน) | 0.21–0.48% | 0.38–0.64% |
-
-ปี 2026 ทองแกว่งแรงขึ้นประมาณ 2 เท่า แต่ break-even (เริ่ม +0.15%, ล็อก +0.02%) และ trailing (Low/High ของ 3 แท่ง M5) ยังใช้ระยะคงที่ที่ตั้งไว้สำหรับตลาดช่วงเงียบ ราคาแตะ +0.15% ก็เลื่อน SL มาที่ +0.02% แล้วโดน noise ปกติกวาดออก ไม้ส่วนใหญ่จึงจบที่กำไรแค่ +0.02%
-
-**แก้ใน v2.10 (Volatility-scaled stops):** คูณระยะ break-even, จุดล็อก, จุดเริ่ม trailing และจำนวนแท่ง trailing ด้วย `scale = ATR(H1) ÷ 0.25%` (ต่ำสุด 1, สูงสุด 2.5)
-- ตลาดช่วงเงียบ (ATR ≤ 0.25%): เหมือนเดิมทุกอย่าง
-- ตลาดแรงแบบปี 2026 (ATR 0.5%): break-even เริ่มที่ +0.30%, ล็อก +0.04%, trailing ใช้ 6 แท่ง M5
-- SL/TP และขนาด lot ไม่เปลี่ยน
-
-| Input ใหม่ | ค่าเริ่มต้น |
-|---|---|
-| `InpVolScaleEnable` | true |
-| `InpVolRefAtrPct` | 0.25 |
-| `InpVolMaxScale` | 2.5 |
-
-**ข้อควรรู้:** ผลของ v2.10 ยังไม่ได้พิสูจน์ด้วยการเทส เพราะไฟล์ราคาที่มีเป็น H1 จำลองการออกด้วย trailing M5 ไม่ได้
-ข้อแลกเปลี่ยนคือไม้ที่เคยได้ +0.02% บางส่วนอาจกลายเป็นไม้แพ้ เพราะ break-even เลื่อนช้าลง ถ้าผลยังไม่ดี ให้ Optimize `InpVolRefAtrPct` (0.20–0.35) และ `InpVolMaxScale` (1.5–3.0)
+- **ปัญหาที่ดู:** ช่วง ก.พ.–ก.ย. 2026 พอร์ตไม่โต ไม้ชนะเฉลี่ยลดจาก +0.20% เหลือ +0.10% และ 78% ของไม้ชนะออกที่จุด break-even (+0.02%)
+- **สิ่งที่ลอง:** v2.10 คูณระยะ break-even และ trailing ตาม ATR(H1) ÷ 0.25%
+- **ผล:** ผู้ใช้เทสแล้ว **v2.00 ดีกว่า** จึงย้อนกลับเป็น v2.00 ตัวกรองนี้จึงไม่ใช่ทางแก้ของช่วงปี 2026
