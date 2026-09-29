@@ -17,9 +17,12 @@
 //|   - Spread, fake-breakout, Friday and NFP filters.                |
 //|  v2.00: parabolic filter - no breakout orders in the direction of |
 //|  an over-stretched, high-volatility move (Oct-Nov 2025 losses).   |
+//|  v2.20: exhaustion filter - no breakout after a very wide D1 bar, |
+//|  or when price already ran far past the H1 EMA50 in the trade     |
+//|  direction. Chosen because it cut losers in 2025 AND 2026.        |
 //+------------------------------------------------------------------+
 #property copyright "GoldBreakoutMulti"
-#property version   "2.00"
+#property version   "2.20"
 
 #include <Trade\Trade.mqh>
 
@@ -76,6 +79,12 @@ input double           InpParaAtrPct      = 0.48;           // H1 ATR(14) above 
 input double           InpParaStretchPct  = 3.0;            // ... and D1 close this % beyond EMA(20) in trade direction
 input int              InpParaAtrPeriod   = 14;             // ATR period (H1)
 input int              InpParaEmaPeriod   = 20;             // EMA period (D1)
+
+input group "=== Exhaustion filter (v2.20) ==="
+input bool             InpExhEnable       = true;           // Skip breakouts into an exhausted move
+input double           InpExhYdayRangePct = 3.0;            // Block both sides if yesterday's D1 range > % of price (0=off)
+input double           InpExhEmaDistPct   = 1.6;            // Block a side if H1 close is > % beyond EMA in its direction (0=off)
+input int              InpExhEmaPeriod    = 50;             // EMA period (H1)
 
 input group "=== NFP filter ==="
 input bool             InpNfpEnable       = true;           // Enable NFP filter
@@ -143,6 +152,7 @@ string    g_peakVar;
 ulong     g_nfpEventId    = 0;
 int       g_atrHandle     = INVALID_HANDLE;
 int       g_emaHandle     = INVALID_HANDLE;
+int       g_exhEmaHandle  = INVALID_HANDLE;
 
 //+------------------------------------------------------------------+
 void SetStrat(int i, bool en, ENUM_STRAT_DIR dir, int lb, double off,
@@ -187,6 +197,13 @@ int OnInit()
          return(INIT_FAILED);
      }
 
+   if(InpExhEnable && InpExhEmaDistPct > 0.0)
+     {
+      g_exhEmaHandle = iMA(_Symbol, PERIOD_H1, InpExhEmaPeriod, 0, MODE_EMA, PRICE_CLOSE);
+      if(g_exhEmaHandle == INVALID_HANDLE)
+         return(INIT_FAILED);
+     }
+
    return(INIT_SUCCEEDED);
   }
 
@@ -195,6 +212,7 @@ void OnDeinit(const int reason)
   {
    if(g_atrHandle != INVALID_HANDLE) IndicatorRelease(g_atrHandle);
    if(g_emaHandle != INVALID_HANDLE) IndicatorRelease(g_emaHandle);
+   if(g_exhEmaHandle != INVALID_HANDLE) IndicatorRelease(g_exhEmaHandle);
   }
 
 //+------------------------------------------------------------------+
@@ -242,8 +260,8 @@ void OnTick()
      }
 
    //--- parabolic filter: pull pending orders on a blocked side at once
-   bool paraBuy  = ParabolicBlock(true);
-   bool paraSell = ParabolicBlock(false);
+   bool paraBuy  = ParabolicBlock(true)  || ExhaustionBlock(true);
+   bool paraSell = ParabolicBlock(false) || ExhaustionBlock(false);
    for(int i = 0; i < STRAT_COUNT; i++)
      {
       if(paraBuy)  DeletePending(g_strat[i].magic, ORDER_TYPE_BUY_STOP);
@@ -300,6 +318,40 @@ bool ParabolicBlock(bool isBuy)
    double stretch = (d1Close / ema[0] - 1.0) * 100.0;
    if(!isBuy) stretch = -stretch;
    return(atrPct > InpParaAtrPct && stretch > InpParaStretchPct);
+  }
+
+//+------------------------------------------------------------------+
+//| True when the move is likely exhausted for a breakout in this     |
+//| direction: yesterday's D1 bar was very wide (both sides), or the  |
+//| last H1 close is already far beyond the H1 EMA in this direction. |
+//+------------------------------------------------------------------+
+bool ExhaustionBlock(bool isBuy)
+  {
+   if(!InpExhEnable)
+      return(false);
+
+   if(InpExhYdayRangePct > 0.0)
+     {
+      double hi = iHigh(_Symbol, PERIOD_D1, 1);
+      double lo = iLow(_Symbol, PERIOD_D1, 1);
+      double cl = iClose(_Symbol, PERIOD_D1, 1);
+      if(cl > 0.0 && (hi - lo) / cl * 100.0 > InpExhYdayRangePct)
+         return(true);
+     }
+
+   if(InpExhEmaDistPct > 0.0 && g_exhEmaHandle != INVALID_HANDLE)
+     {
+      double ema[1];
+      double c = iClose(_Symbol, PERIOD_H1, 1);
+      if(CopyBuffer(g_exhEmaHandle, 0, 1, 1, ema) == 1 && ema[0] > 0.0 && c > 0.0)
+        {
+         double dist = (c / ema[0] - 1.0) * 100.0;
+         if(!isBuy) dist = -dist;
+         if(dist > InpExhEmaDistPct)
+            return(true);
+        }
+     }
+   return(false);
   }
 
 //+------------------------------------------------------------------+
