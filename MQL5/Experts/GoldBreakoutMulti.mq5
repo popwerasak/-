@@ -17,9 +17,12 @@
 //|   - Spread, fake-breakout, Friday and NFP filters.                |
 //|  v2.00: parabolic filter - no breakout orders in the direction of |
 //|  an over-stretched, high-volatility move (Oct-Nov 2025 losses).   |
+//|  v2.10: break-even, lock, trail start and trail length scale with |
+//|  H1 ATR, so doubled 2026 volatility no longer knocks 78% of wins  |
+//|  out at the +0.02% break-even lock.                               |
 //+------------------------------------------------------------------+
 #property copyright "GoldBreakoutMulti"
-#property version   "2.00"
+#property version   "2.10"
 
 #include <Trade\Trade.mqh>
 
@@ -86,6 +89,11 @@ input int              InpNfpMinBefore    = 100;            // Minutes before NF
 input int              InpNfpMinAfter     = 60;             // Minutes after NFP
 input bool             InpNfpCloseOpen    = true;           // Close open trades before NFP
 input bool             InpNfpClosePending = true;           // Delete pending orders before NFP
+
+input group "=== Volatility-scaled stops (v2.10) ==="
+input bool             InpVolScaleEnable  = true;           // Scale BE / trailing with H1 ATR
+input double           InpVolRefAtrPct    = 0.25;           // H1 ATR % the BE / trail settings were tuned for
+input double           InpVolMaxScale     = 2.5;            // Max scale factor (min is 1 = unchanged)
 
 input group "=== Break-even & trailing stop (High/Low) ==="
 input double           InpBEPct           = 0.15;           // Move SL to break-even at profit (% price, 0=off)
@@ -179,11 +187,16 @@ int OnInit()
    if(InpNfpEnable && InpNfpUseCalendar && !MQLInfoInteger(MQL_TESTER))
       g_nfpEventId = FindNfpEventId();
 
-   if(InpParaEnable)
+   if(InpParaEnable || InpVolScaleEnable)
      {
       g_atrHandle = iATR(_Symbol, PERIOD_H1, InpParaAtrPeriod);
+      if(g_atrHandle == INVALID_HANDLE)
+         return(INIT_FAILED);
+     }
+   if(InpParaEnable)
+     {
       g_emaHandle = iMA(_Symbol, PERIOD_D1, InpParaEmaPeriod, 0, MODE_EMA, PRICE_CLOSE);
-      if(g_atrHandle == INVALID_HANDLE || g_emaHandle == INVALID_HANDLE)
+      if(g_emaHandle == INVALID_HANDLE)
          return(INIT_FAILED);
      }
 
@@ -288,18 +301,41 @@ bool ParabolicBlock(bool isBuy)
    if(!InpParaEnable || g_atrHandle == INVALID_HANDLE || g_emaHandle == INVALID_HANDLE)
       return(false);
 
-   double atr[1], ema[1];
-   if(CopyBuffer(g_atrHandle, 0, 1, 1, atr) != 1 || CopyBuffer(g_emaHandle, 0, 1, 1, ema) != 1)
+   double ema[1];
+   if(CopyBuffer(g_emaHandle, 0, 1, 1, ema) != 1)
       return(false);
-   double h1Close = iClose(_Symbol, PERIOD_H1, 1);
    double d1Close = iClose(_Symbol, PERIOD_D1, 1);
-   if(h1Close <= 0.0 || d1Close <= 0.0 || ema[0] <= 0.0)
+   double atrPct  = AtrPct();
+   if(atrPct <= 0.0 || d1Close <= 0.0 || ema[0] <= 0.0)
       return(false);
 
-   double atrPct  = atr[0] / h1Close * 100.0;
    double stretch = (d1Close / ema[0] - 1.0) * 100.0;
    if(!isBuy) stretch = -stretch;
    return(atrPct > InpParaAtrPct && stretch > InpParaStretchPct);
+  }
+
+//+------------------------------------------------------------------+
+//| H1 ATR of the last closed bar as % of price (0 when unavailable) |
+//+------------------------------------------------------------------+
+double AtrPct()
+  {
+   if(g_atrHandle == INVALID_HANDLE) return(0.0);
+   double atr[1];
+   if(CopyBuffer(g_atrHandle, 0, 1, 1, atr) != 1) return(0.0);
+   double c = iClose(_Symbol, PERIOD_H1, 1);
+   return(c > 0.0 ? atr[0] / c * 100.0 : 0.0);
+  }
+
+//+------------------------------------------------------------------+
+//| Factor for BE / trailing distances: 1 in calm markets, grows with |
+//| volatility up to InpVolMaxScale.                                  |
+//+------------------------------------------------------------------+
+double VolScale()
+  {
+   if(!InpVolScaleEnable || InpVolRefAtrPct <= 0.0) return(1.0);
+   double a = AtrPct();
+   if(a <= 0.0) return(1.0);
+   return(MathMax(1.0, MathMin(InpVolMaxScale, a / InpVolRefAtrPct)));
   }
 
 //+------------------------------------------------------------------+
@@ -446,6 +482,8 @@ void ManageStops()
    double stops  = (double)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL) * point;
    double bid    = SymbolInfoDouble(_Symbol, SYMBOL_BID);
    double ask    = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double scale  = VolScale();
+   int    tBars  = (int)MathMax(1, MathRound(InpTrailBars * scale));
 
    for(int p = PositionsTotal() - 1; p >= 0; p--)
      {
@@ -461,9 +499,9 @@ void ManageStops()
       double gain  = isBuy ? bid - open : open - ask;
 
       //--- break-even
-      if(InpBEPct > 0.0 && gain >= open * InpBEPct / 100.0)
+      if(InpBEPct > 0.0 && gain >= open * InpBEPct * scale / 100.0)
         {
-         double lock = open * InpBELockPct / 100.0;
+         double lock = open * InpBELockPct * scale / 100.0;
          double be   = NormalizeDouble(isBuy ? open + lock : open - lock, digits);
          bool   need = isBuy ? (curSL < be - point && be < bid - stops)
                              : ((curSL == 0.0 || curSL > be + point) && be > ask + stops);
@@ -471,19 +509,19 @@ void ManageStops()
             curSL = be;
         }
 
-      if(!InpUseHLTrail || gain < open * g_strat[i].trailStart / 100.0) continue;
+      if(!InpUseHLTrail || gain < open * g_strat[i].trailStart * scale / 100.0) continue;
 
       double newSL;
       if(isBuy)
         {
-         int idx = iLowest(_Symbol, InpTrailTF, MODE_LOW, InpTrailBars, 1);
+         int idx = iLowest(_Symbol, InpTrailTF, MODE_LOW, tBars, 1);
          if(idx < 0) continue;
          newSL = NormalizeDouble(iLow(_Symbol, InpTrailTF, idx), digits);
          if(newSL <= curSL + point || newSL >= bid - stops) continue;
         }
       else
         {
-         int idx = iHighest(_Symbol, InpTrailTF, MODE_HIGH, InpTrailBars, 1);
+         int idx = iHighest(_Symbol, InpTrailTF, MODE_HIGH, tBars, 1);
          if(idx < 0) continue;
          newSL = NormalizeDouble(iHigh(_Symbol, InpTrailTF, idx), digits);
          if((curSL > 0.0 && newSL >= curSL - point) || newSL <= ask + stops) continue;
