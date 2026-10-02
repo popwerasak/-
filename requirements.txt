@@ -1,6 +1,7 @@
 # ติดตั้ง PyTorch ก่อน ตามคู่มือใน README (ขึ้นกับ OS/การ์ด AMD) แล้วค่อย pip install -r requirements.txt
 PySide6>=6.6
 diffusers>=0.30
+huggingface_hub
 transformers>=4.40
 accelerate>=0.30
 safetensors

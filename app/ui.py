@@ -9,7 +9,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
-from .inpaint import MODELS, PRESETS, Inpainter, Params
+from pathlib import Path
+
+from .backends import DiffusersBackend, QuickBackend
+from .inpaint import PRESETS, Inpainter, Params
+
+DEFAULT_MODEL_DIR = Path(__file__).resolve().parent.parent / "models" / "sd15-inpaint"
+MODE_QUICK, MODE_AI = "เร็ว (ไม่ใช้ AI) — ของเล็ก/บาง เช่น สร้อย", "AI (ช้ากว่า แต่เติมได้เนียนกว่า)"
 
 
 def pil_to_qimage(im: Image.Image) -> QImage:
@@ -137,9 +143,11 @@ class MainWindow(QMainWindow):
         side = QWidget()
         form = QFormLayout(side)
 
-        self.model_box = QComboBox(); self.model_box.addItems(MODELS)
-        self.model_dir = QLineEdit(); self.model_dir.setPlaceholderText("โฟลเดอร์โมเดลในเครื่อง (เว้นว่าง = แคช HuggingFace)")
-        self.offline = QCheckBox("ออฟไลน์เต็มรูปแบบ (ห้ามเชื่อมต่ออินเทอร์เน็ต)")
+        self.model_box = QComboBox(); self.model_box.addItems([MODE_QUICK, MODE_AI])
+        self.model_dir = QLineEdit(str(DEFAULT_MODEL_DIR) if DEFAULT_MODEL_DIR.exists() else "")
+        self.model_dir.setPlaceholderText("โฟลเดอร์โมเดล AI (ดาวน์โหลดด้วย tools/download_model.py)")
+        self.offline = QCheckBox("ออฟไลน์เต็มรูปแบบ (ห้ามเชื่อมต่ออินเทอร์เน็ต)"); self.offline.setChecked(True)
+        self.res = QComboBox(); self.res.addItems(["384", "448", "512"]); self.res.setCurrentText("448")
         self.preset = QComboBox(); self.preset.addItems(PRESETS)
         self.prompt = QPlainTextEdit(); self.prompt.setMaximumHeight(60)
         self.negative = QPlainTextEdit(); self.negative.setMaximumHeight(60)
@@ -147,14 +155,14 @@ class MainWindow(QMainWindow):
 
         self.brush = QSlider(Qt.Horizontal); self.brush.setRange(4, 200); self.brush.setValue(30)
         self.brush.valueChanged.connect(lambda v: setattr(self.canvas, "brush", v))
-        self.grow = QSpinBox(); self.grow.setRange(0, 60); self.grow.setValue(12)
-        self.steps = QSpinBox(); self.steps.setRange(10, 80); self.steps.setValue(30)
-        self.variants = QSpinBox(); self.variants.setRange(1, 6); self.variants.setValue(3)
+        self.grow = QSpinBox(); self.grow.setRange(0, 60); self.grow.setValue(8)
+        self.steps = QSpinBox(); self.steps.setRange(10, 80); self.steps.setValue(20)
+        self.variants = QSpinBox(); self.variants.setRange(1, 6); self.variants.setValue(1)
         self.seed = QSpinBox(); self.seed.setRange(-1, 2**31 - 1); self.seed.setValue(-1)
         self.seed.setSpecialValueText("สุ่ม")
 
-        for label, w in [("โมเดล", self.model_box), ("โฟลเดอร์โมเดล", self.model_dir), ("", self.offline),
-                         ("งาน", self.preset), ("Prompt", self.prompt), ("Negative", self.negative),
+        for label, w in [("โหมด", self.model_box), ("โฟลเดอร์โมเดล", self.model_dir), ("", self.offline),
+                         ("ความละเอียด AI (เล็ก=เร็ว)", self.res), ("งาน", self.preset), ("Prompt", self.prompt), ("Negative", self.negative),
                          ("ขนาดแปรง", self.brush), ("ขยาย mask (px)", self.grow), ("Steps", self.steps),
                          ("จำนวนตัวเลือก", self.variants), ("Seed", self.seed)]:
             form.addRow(label, w)
@@ -213,12 +221,17 @@ class MainWindow(QMainWindow):
     def generate(self):
         if self.canvas.image is None or self.worker is not None:
             return
-        key = (self.model_box.currentText(), self.model_dir.text() or None, self.offline.isChecked())
+        mode = self.model_box.currentText()
+        key = (mode, self.model_dir.text().strip(), self.offline.isChecked())
+        if mode == MODE_AI and not key[1]:
+            QMessageBox.warning(self, "ยังไม่มีโมเดล", "โหมด AI ต้องมีโฟลเดอร์โมเดล\nรัน: python tools/download_model.py (ใช้เน็ตครั้งเดียว)")
+            return
         if self.engine is None or self.engine_key != key:
-            self.engine = Inpainter(key[0], key[1], key[2]); self.engine_key = key
+            backend = QuickBackend() if mode == MODE_QUICK else DiffusersBackend(key[1], key[2])
+            self.engine = Inpainter(backend); self.engine_key = key
         params = Params(
             prompt=self.prompt.toPlainText(), negative=self.negative.toPlainText(), mask_grow=self.grow.value(),
-            steps=self.steps.value(), variants=self.variants.value(),
+            steps=self.steps.value(), variants=self.variants.value(), res=int(self.res.currentText()),
             seed=None if self.seed.value() < 0 else self.seed.value(),
         )
         image, mask, engine = self.canvas.image, self.canvas.mask_pil(), self.engine
