@@ -46,17 +46,49 @@ def composite(original: Image.Image, generated: Image.Image, mask: Image.Image, 
     return Image.composite(generated.convert("RGB"), original.convert("RGB"), soft)
 
 
+def _skin_pixels(rgb: np.ndarray) -> np.ndarray:
+    """ตัวกรองสีผิวแบบง่าย (YCrCb) — ไม่เอาเสื้อผ้า/พื้นหลัง/คราบดำมาปนเป็นสีอ้างอิง"""
+    ycc = cv2.cvtColor(rgb, cv2.COLOR_RGB2YCrCb)
+    y, cr, cb = ycc[..., 0], ycc[..., 1], ycc[..., 2]
+    return (y > 50) & (cr >= 133) & (cr <= 180) & (cb >= 77) & (cb <= 135)
+
+
+def _smooth_field(img: np.ndarray, weight: np.ndarray, sigma: float) -> np.ndarray:
+    """ค่าเฉลี่ยแบบถ่วงน้ำหนักเฉพาะพิกเซลอ้างอิง ไล่เฉดต่อเนื่องเข้าไปในพื้นที่ที่ไม่มีอ้างอิง"""
+    out = None
+    for k in (1, 3, 9):  # ขยาย sigma จนครอบคลุมทั้ง mask
+        num = cv2.GaussianBlur(img * weight[..., None], (0, 0), sigma * k)
+        den = cv2.GaussianBlur(weight, (0, 0), sigma * k)[..., None]
+        field = num / np.maximum(den, 1e-6)
+        out = field if out is None else np.where(den > 0.03, out, field)
+        if (den > 0.03).all():
+            break
+    return out
+
+
 def match_color(generated: Image.Image, reference: Image.Image, mask: Image.Image) -> Image.Image:
-    """ปรับค่าเฉลี่ย/ส่วนเบี่ยงเบนสีของผลลัพธ์ให้ใกล้ผิวรอบ ๆ mask (วงแหวนนอก mask)"""
+    """ปรับสี/แสงต่ำความถี่ของส่วนที่เติม ให้ต่อเนื่องกับสีผิวรอบ ๆ (เก็บรายละเอียดผิวที่ AI สร้างไว้)
+
+    out = generated − blur(generated) + ค่าสีผิวรอบ ๆ ที่ไล่เฉดเข้ามา  (เฉพาะใน mask)
+    """
     g = np.asarray(generated.convert("RGB"), dtype=np.float32)
-    ref = np.asarray(reference.convert("RGB"), dtype=np.float32)
+    ref8 = np.asarray(reference.convert("RGB"), dtype=np.uint8)
     m = np.array(mask.convert("L")) > 127
-    ring = cv2.dilate(m.astype(np.uint8), np.ones((31, 31), np.uint8)).astype(bool) & ~m
-    if m.sum() < 16 or ring.sum() < 16:
+    if m.sum() < 16:
         return generated
+
+    near = cv2.dilate(m.astype(np.uint8), np.ones((9, 9), np.uint8)) > 0  # เว้นขอบ mask กันเงา/คราบ
+    usable = ~near
+    w = (usable & _skin_pixels(ref8)).astype(np.float32)
+    if w.sum() < 200:  # ไม่มีสีผิวรอบ ๆ (เช่น ลบของบนพื้นหลัง) → ใช้ทุกพิกเซลที่ไม่มืดจัด
+        w = (usable & (ref8.mean(-1) > 40)).astype(np.float32)
+    if w.sum() < 50:
+        return generated
+
+    sigma = max(min(g.shape[:2]) / 8, 8.0)
+    target = _smooth_field(ref8.astype(np.float32), w, sigma)
+    low = cv2.GaussianBlur(g, (0, 0), sigma)
+    fixed = np.clip(g - low + target, 0, 255)
     out = g.copy()
-    for c in range(3):
-        gm, gs = g[..., c][m].mean(), g[..., c][m].std() + 1e-6
-        rm, rs = ref[..., c][ring].mean(), ref[..., c][ring].std() + 1e-6
-        out[..., c][m] = (g[..., c][m] - gm) * min(rs / gs, 1.5) + rm
-    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
+    out[m] = fixed[m]
+    return Image.fromarray(out.astype(np.uint8))

@@ -39,3 +39,20 @@ def test_match_color_moves_toward_surroundings():
     gen = Image.new("RGB", (200, 150), (90, 90, 90))
     out = np.array(imageops.match_color(gen, ref, _mask()))
     assert abs(int(out[75, 100][0]) - 220) < 10
+
+
+def test_match_color_ignores_dark_clothing_and_follows_skin_gradient():
+    """แขน (สีผิวไล่เฉดตามแนวนอน) + แขนเสื้อสีน้ำเงินเข้มติดกับ mask — ผลต้องเป็นสีผิว ไม่ใช่เทา"""
+    h, w = 300, 400
+    x = np.linspace(0, 30, w, dtype=np.float32)
+    skin = np.stack([np.tile(200 + x, (h, 1)), np.tile(150 + x, (h, 1)), np.tile(120 + x, (h, 1))], -1)
+    ref = skin.copy()
+    ref[:, :90] = (20, 30, 60)  # เสื้อสีเข้มด้านซ้าย
+    mask = Image.new("L", (w, h), 0)
+    mask.paste(255, (150, 100, 250, 200))
+    gen = Image.new("RGB", (w, h), (110, 110, 110))  # AI เติมมาเป็นสีเทา
+    out = np.array(imageops.match_color(gen, Image.fromarray(ref.astype(np.uint8)), mask)).astype(float)
+    inside = np.array(mask) > 127
+    err = np.abs(out - skin)[inside].mean()
+    assert err < 12, err
+    assert np.array_equal(out[~inside], np.array(gen).astype(float)[~inside])  # นอก mask ไม่ถูกแตะ

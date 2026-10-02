@@ -26,7 +26,7 @@ PRESETS = {
 class Params:
     prompt: str = ""
     negative: str = ""
-    mask_grow: int = 8
+    mask_grow: int = 14
     steps: int = 20
     guidance: float = 7.5
     strength: float = 1.0

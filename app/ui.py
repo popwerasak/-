@@ -170,7 +170,7 @@ class MainWindow(QMainWindow):
         self.brush = QSlider(Qt.Horizontal); self.brush.setRange(4, 200); self.brush.setValue(30)
         self.brush_label = QLabel("ขนาดแปรง: 30 px")
         self.brush.valueChanged.connect(lambda v: (setattr(self.canvas, "brush", v), self.brush_label.setText(f"ขนาดแปรง: {v} px")))
-        self.grow = QSpinBox(); self.grow.setRange(0, 60); self.grow.setValue(8)
+        self.grow = QSpinBox(); self.grow.setRange(0, 60); self.grow.setValue(14)
         self.steps = QSpinBox(); self.steps.setRange(10, 80); self.steps.setValue(20)
         self.variants = QSpinBox(); self.variants.setRange(1, 6); self.variants.setValue(1)
         self.seed = QSpinBox(); self.seed.setRange(-1, 2**31 - 1); self.seed.setValue(-1)
