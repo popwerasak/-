@@ -9,12 +9,14 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+import re
 from pathlib import Path
 
 from .backends import DiffusersBackend, QuickBackend
 from .inpaint import PRESETS, Inpainter, Params
 
 DEFAULT_MODEL_DIR = Path(__file__).resolve().parent.parent / "models" / "sd15-inpaint"
+COMMAND_WORDS = re.compile(r"\b(remove|delete|erase|get rid|take off|without)\b|ลบ|เอา.{0,12}ออก", re.I)
 MODE_QUICK, MODE_AI = "เร็ว (ไม่ใช้ AI) — ของเล็ก/บาง เช่น สร้อย", "AI (ช้ากว่า แต่เติมได้เนียนกว่า)"
 
 
@@ -161,6 +163,8 @@ class MainWindow(QMainWindow):
         self.preset = QComboBox(); self.preset.addItems(PRESETS)
         self.prompt = QPlainTextEdit(); self.prompt.setMaximumHeight(60)
         self.negative = QPlainTextEdit(); self.negative.setMaximumHeight(60)
+        self.prompt.setPlaceholderText("ว่าง = อัตโนมัติ  หรือเขียน 'สิ่งที่อยากให้เห็น' เช่น bare wrist, natural skin (อย่าสั่งว่า remove/ลบ)")
+        self.negative.setPlaceholderText("สิ่งที่ไม่อยากให้โผล่ เช่น watch, bracelet")
         self.preset.currentTextChanged.connect(self._apply_preset); self._apply_preset(self.preset.currentText())
 
         self.brush = QSlider(Qt.Horizontal); self.brush.setRange(4, 200); self.brush.setValue(30)
@@ -232,6 +236,14 @@ class MainWindow(QMainWindow):
     def generate(self):
         if self.canvas.image is None or self.worker is not None:
             return
+        if COMMAND_WORDS.search(self.prompt.toPlainText()):
+            ans = QMessageBox.question(
+                self, "Prompt ดูเป็นคำสั่ง",
+                "โมเดลไม่เข้าใจคำสั่งอย่าง remove/ลบ — มันจะวาดสิ่งที่เขียนไว้ใน Prompt ออกมาแทน\n"
+                "ควรเขียนสิ่งที่อยากให้เห็น เช่น 'bare wrist, natural skin' และใส่สิ่งที่ไม่ต้องการในช่อง Negative\n\n"
+                "ใช้ Prompt นี้ต่อไปหรือไม่?")
+            if ans != QMessageBox.Yes:
+                return
         mode = self.model_box.currentText()
         key = (mode, self.model_dir.text().strip(), self.offline.isChecked())
         if mode == MODE_AI and not key[1]:
