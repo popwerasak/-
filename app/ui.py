@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from PIL import Image
-from PySide6.QtCore import QPoint, QRectF, Qt, QThread, Signal
-from PySide6.QtGui import QAction, QColor, QImage, QPainter, QPen, QPixmap
+from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, Qt, QThread, Signal
+from PySide6.QtGui import QAction, QColor, QIcon, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
     QLineEdit, QMainWindow, QMessageBox, QPlainTextEdit, QPushButton, QSlider, QSpinBox,
@@ -30,8 +30,11 @@ class Canvas(QWidget):
         super().__init__()
         self.setMinimumSize(640, 480)
         self.setCursor(Qt.CrossCursor)
+        self.setMouseTracking(True)
+        self._hover: QPoint | None = None
         self.image: Image.Image | None = None
         self.mask = QImage()
+        self.overlay = QImage()
         self.brush = 30
         self.show_mask = True
         self._last: QPoint | None = None
@@ -46,8 +49,11 @@ class Canvas(QWidget):
     def clear_mask(self):
         if self.image is None:
             return
-        self.mask = QImage(self.image.size, QImage.Format_Grayscale8)
+        w, h = self.image.size
+        self.mask = QImage(w, h, QImage.Format_Grayscale8)
         self.mask.fill(0)
+        self.overlay = QImage(w, h, QImage.Format_ARGB32_Premultiplied)
+        self.overlay.fill(Qt.transparent)
         self.update()
 
     def mask_pil(self) -> Image.Image:
@@ -68,11 +74,16 @@ class Canvas(QWidget):
         return QPoint(int((pos.x() - ox) / s), int((pos.y() - oy) / s))
 
     def _stroke(self, a: QPoint, b: QPoint, erase: bool):
-        p = QPainter(self.mask)
-        p.setPen(QPen(QColor(0 if erase else 255, 0 if erase else 255, 0 if erase else 255), self.brush,
-                      Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
-        p.drawLine(a, b)
-        p.end()
+        # mask (ขาว = ลบ) ใช้ส่งให้โปรแกรมประมวลผล / overlay (แดงโปร่ง) ใช้แสดงบนจอ
+        for img, color, mode in (
+            (self.mask, QColor(0, 0, 0) if erase else QColor(255, 255, 255), QPainter.CompositionMode_Source),
+            (self.overlay, QColor(255, 0, 0, 120), QPainter.CompositionMode_Clear if erase else QPainter.CompositionMode_Source),
+        ):
+            p = QPainter(img)
+            p.setCompositionMode(mode)
+            p.setPen(QPen(color, self.brush, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            p.drawLine(a, b)
+            p.end()
         self.update()
 
     def mousePressEvent(self, e):
@@ -82,6 +93,8 @@ class Canvas(QWidget):
         self._stroke(self._last, self._last, e.button() == Qt.RightButton)
 
     def mouseMoveEvent(self, e):
+        self._hover = e.position().toPoint()
+        self.update()
         if self.image is None or self._last is None:
             return
         cur = self._to_img(e.position())
@@ -101,16 +114,13 @@ class Canvas(QWidget):
         s, ox, oy = self._scale_off()
         target = QRectF(ox, oy, self.pix.width() * s, self.pix.height() * s)
         p.drawPixmap(target, self.pix, QRectF(self.pix.rect()))
-        if self.show_mask:
-            red = QImage(self.mask.size(), QImage.Format_ARGB32)
-            red.fill(QColor(255, 0, 0, 0))
-            q = QPainter(red)
-            q.setCompositionMode(QPainter.CompositionMode_Source)
-            q.fillRect(red.rect(), QColor(255, 0, 0, 110))
-            q.setCompositionMode(QPainter.CompositionMode_DestinationIn)
-            q.drawImage(0, 0, self.mask)
-            q.end()
-            p.drawImage(target, red)
+        if self.show_mask and not self.overlay.isNull():
+            p.drawImage(target, self.overlay)
+        if self._hover is not None:  # วงกลมแสดงขนาดแปรง
+            r = self.brush * s / 2
+            p.setPen(QPen(QColor(255, 255, 255), 1.5))
+            p.setBrush(Qt.NoBrush)
+            p.drawEllipse(QPointF(self._hover), r, r)
 
 
 class Worker(QThread):
@@ -154,7 +164,8 @@ class MainWindow(QMainWindow):
         self.preset.currentTextChanged.connect(self._apply_preset); self._apply_preset(self.preset.currentText())
 
         self.brush = QSlider(Qt.Horizontal); self.brush.setRange(4, 200); self.brush.setValue(30)
-        self.brush.valueChanged.connect(lambda v: setattr(self.canvas, "brush", v))
+        self.brush_label = QLabel("ขนาดแปรง: 30 px")
+        self.brush.valueChanged.connect(lambda v: (setattr(self.canvas, "brush", v), self.brush_label.setText(f"ขนาดแปรง: {v} px")))
         self.grow = QSpinBox(); self.grow.setRange(0, 60); self.grow.setValue(8)
         self.steps = QSpinBox(); self.steps.setRange(10, 80); self.steps.setValue(20)
         self.variants = QSpinBox(); self.variants.setRange(1, 6); self.variants.setValue(1)
@@ -163,7 +174,7 @@ class MainWindow(QMainWindow):
 
         for label, w in [("โหมด", self.model_box), ("โฟลเดอร์โมเดล", self.model_dir), ("", self.offline),
                          ("ความละเอียด AI (เล็ก=เร็ว)", self.res), ("งาน", self.preset), ("Prompt", self.prompt), ("Negative", self.negative),
-                         ("ขนาดแปรง", self.brush), ("ขยาย mask (px)", self.grow), ("Steps", self.steps),
+                         (self.brush_label, self.brush), ("ขยาย mask (px)", self.grow), ("Steps", self.steps),
                          ("จำนวนตัวเลือก", self.variants), ("Seed", self.seed)]:
             form.addRow(label, w)
 
@@ -249,7 +260,7 @@ class MainWindow(QMainWindow):
         for r in results:
             b = QPushButton()
             t = r.copy(); t.thumbnail((90, 90))
-            b.setIcon(QPixmap.fromImage(pil_to_qimage(t))); b.setIconSize(t.size()); b.setFixedSize(96, 96)
+            b.setIcon(QIcon(QPixmap.fromImage(pil_to_qimage(t)))); b.setIconSize(QSize(*t.size)); b.setFixedSize(96, 96)
             b.clicked.connect(lambda _=False, im=r: self.canvas.set_image(im))
             self.thumbs.addWidget(b)
         if results:
