@@ -1,0 +1,11 @@
+{
+  "name": "thaijo-marketplace",
+  "owner": { "name": "popwerasak" },
+  "plugins": [
+    {
+      "name": "thaijo",
+      "source": "./",
+      "description": "Search all research articles on ThaiJO (tci-thaijo.org) from Claude"
+    }
+  ]
+}
