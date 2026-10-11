@@ -6,6 +6,7 @@ Wraps the public JSON API used by the ThaiJO website (/api/v1/...).
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, Literal
 
 import httpx
@@ -14,6 +15,7 @@ from mcp.server.mcpserver import MCPServer
 BASE_URL = "https://www.tci-thaijo.org/api/v1"
 MAX_PER_PAGE = 50  # server caps per_page at 50
 MAX_QUERY_LENGTH = 255
+_THAI = re.compile("[\u0e00-\u0e7f]")
 
 mcp = MCPServer("thaijo")
 _client = httpx.Client(
@@ -155,6 +157,107 @@ def get_article(article_id: str) -> str:
         }
     )
     return _dump(result)
+
+
+def _apa_author_en(name: str) -> str:
+    # "Given Middle Family" -> "Family, G. M."
+    parts = name.split()
+    if len(parts) < 2:
+        return name
+    initials = " ".join(
+        "-".join(f"{p[0]}." for p in part.split("-") if p) for part in parts[:-1]
+    )
+    return f"{parts[-1]}, {initials}"
+
+
+def _apa_author_list(names: list[str], conjunction: str) -> str:
+    # APA 7: list up to 20 authors; with 21+ list the first 19, an ellipsis, then the last.
+    if not names:
+        return ""
+    if len(names) == 1:
+        return names[0]
+    if len(names) == 2 and conjunction != "&":
+        return f"{names[0]} {conjunction} {names[1]}"
+    if len(names) > 20:
+        return ", ".join(names[:19]) + ", . . . " + names[-1]
+    return ", ".join(names[:-1]) + f", {conjunction} " + names[-1]
+
+
+def _apa_reference(article: dict, issue: dict | None, lang: str, buddhist_year: bool) -> str:
+    def pick(field: dict | None) -> str:
+        field = field or {}
+        other = "en_US" if lang == "th_TH" else "th_TH"
+        return (field.get(lang) or field.get(other) or "").strip()
+
+    authors_field = article.get("authors") or {}
+    en_names = authors_field.get("en_US") or []
+    # Some records store Thai script in the English author field; those are not inverted.
+    if lang == "en_US" and en_names and not any(_THAI.search(a) for a in en_names):
+        authors = _apa_author_list([_apa_author_en(a) for a in authors_field["en_US"]], "&")
+    else:
+        names = authors_field.get(lang) or authors_field.get("th_TH") or authors_field.get("en_US") or []
+        authors = _apa_author_list([" ".join(a.split()) for a in names], "และ" if lang == "th_TH" else "&")
+
+    year = article.get("year")
+    if year and buddhist_year:
+        year = int(year) + 543
+    title = " ".join(pick(article.get("titles")).split()).rstrip(".")
+    journal = pick(article.get("journal_name"))
+
+    source = f"*{journal}*"
+    volume = (issue or {}).get("volume")
+    number = (issue or {}).get("number")
+    if volume:
+        source += f", *{volume}*"
+        if number:
+            source += f"({number})"
+    pages = (article.get("pages") or "").replace("-", "–")
+    if pages:
+        source += f", {pages}"
+
+    doi = article.get("doi")
+    link = f"https://doi.org/{doi}" if doi and not doi.startswith("http") else doi or article.get("article_url")
+
+    head = (authors if authors.endswith(".") else f"{authors}.") + " " if authors else ""
+    return f"{head}({year or 'n.d.'}). {title}. {source}. {link}"
+
+
+@mcp.tool()
+def cite_apa(article_ids: list[str], buddhist_year: bool = False) -> str:
+    """Build APA 7th edition references for ThaiJO articles, in Thai and English.
+
+    Uses the article's real metadata (authors, volume, issue number, pages, DOI),
+    so present the returned text as-is rather than rewriting it. Italics are marked
+    with *asterisks* (Markdown). Title capitalization is kept as published.
+
+    Args:
+        article_ids: Article ids from search_articles, e.g. ["health02-276115"].
+        buddhist_year: Use Buddhist Era years (พ.ศ.) in the Thai reference, as many
+            Thai journals require.
+    """
+    issues: dict[str, dict | None] = {}
+    results = []
+    for article_id in article_ids:
+        try:
+            article = _request("GET", f"/articles/{article_id}")
+        except RuntimeError as exc:
+            results.append({"id": article_id, "error": str(exc)})
+            continue
+        issue_key = f"{article.get('category')}-{article.get('issue_id')}"
+        if issue_key not in issues:
+            try:
+                issues[issue_key] = _request("GET", f"/issues/{issue_key}")
+            except RuntimeError:
+                issues[issue_key] = None
+        issue = issues[issue_key]
+        results.append(
+            {
+                "id": article_id,
+                "apa_th": _apa_reference(article, issue, "th_TH", buddhist_year),
+                "apa_en": _apa_reference(article, issue, "en_US", False),
+            }
+        )
+    return _dump(results)
 
 
 @mcp.tool()
