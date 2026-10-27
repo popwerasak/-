@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แปลผล InBody</title>
+<meta name="description" content="เว็บแอพช่วยแปลผลการวัดองค์ประกอบร่างกาย (InBody / ACCUNIQ BC380) เป็นภาษาไทยที่เข้าใจง่าย">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f7fa; --card:#ffffff; --text:#1d2433; --muted:#5f6b7f; --line:#e2e7ef;
+  --accent:#2563eb; --accent-soft:#e6eeff;
+  --good:#15803d; --good-soft:#e3f6e9;
+  --warn:#b45309; --warn-soft:#fdf1dc;
+  --bad:#b91c1c; --bad-soft:#fde4e4;
+  --info:#475569; --info-soft:#eef1f5;
+  --band:#d8f0df; --track:#eef1f5;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f141c; --card:#171e29; --text:#e6ebf2; --muted:#9aa6b8; --line:#2a3443;
+    --accent:#6b9bff; --accent-soft:#1c2a47;
+    --good:#4ade80; --good-soft:#163323;
+    --warn:#fbbf24; --warn-soft:#3a2c0e;
+    --bad:#f87171; --bad-soft:#3d1a1a;
+    --info:#a5b4c8; --info-soft:#222c3a;
+    --band:#1d3b29; --track:#232d3b;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f141c; --card:#171e29; --text:#e6ebf2; --muted:#9aa6b8; --line:#2a3443;
+  --accent:#6b9bff; --accent-soft:#1c2a47;
+  --good:#4ade80; --good-soft:#163323;
+  --warn:#fbbf24; --warn-soft:#3a2c0e;
+  --bad:#f87171; --bad-soft:#3d1a1a;
+  --info:#a5b4c8; --info-soft:#222c3a;
+  --band:#1d3b29; --track:#232d3b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Sarabun",system-ui,sans-serif;font-size:16px;line-height:1.6}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 60px}
+header h1{margin:0 0 4px;font-size:1.7rem}
+header p{margin:0;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px}
+h2{font-size:1.25rem;margin:0 0 10px}
+h3{font-size:1.05rem;margin:14px 0 8px}
+details{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px}
+summary{cursor:pointer;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 14px;margin-top:10px}
+label{display:block;font-size:.9rem;color:var(--muted)}
+.field{display:flex;gap:6px}
+input,select,textarea{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
+input.r{max-width:80px}
+textarea{min-height:110px;font-family:ui-monospace,monospace;font-size:.9rem}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+button{font:inherit;border:0;border-radius:10px;padding:9px 16px;cursor:pointer;background:var(--accent);color:#fff;font-weight:600}
+button.ghost{background:var(--accent-soft);color:var(--accent)}
+.hint{font-size:.85rem;color:var(--muted)}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.tile{border-radius:12px;padding:12px;background:var(--info-soft)}
+.tile .k{font-size:.85rem;color:var(--muted)}
+.tile .v{font-size:1.45rem;font-weight:700}
+.tile .s{font-size:.85rem;font-weight:600}
+.good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)} .info{color:var(--info)}
+.bg-good{background:var(--good-soft)} .bg-warn{background:var(--warn-soft)} .bg-bad{background:var(--bad-soft)} .bg-info{background:var(--info-soft)}
+.pill{display:inline-block;padding:1px 10px;border-radius:999px;font-size:.8rem;font-weight:600;white-space:nowrap}
+.metric{padding:12px 0;border-top:1px solid var(--line)}
+.metric:first-child{border-top:0}
+.mhead{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+.mname{font-weight:600}
+.mval{font-weight:700}
+.bar{position:relative;height:10px;background:var(--track);border-radius:6px;margin:8px 0 4px}
+.bar .band{position:absolute;top:0;bottom:0;background:var(--band);border-radius:6px}
+.bar .dot{position:absolute;top:-4px;width:18px;height:18px;margin-left:-9px;border-radius:50%;border:3px solid var(--card)}
+.mdesc{font-size:.92rem;color:var(--muted);margin:4px 0 0}
+.mmsg{font-size:.95rem;margin:4px 0 0}
+ul.recs{padding-left:20px;margin:6px 0}
+ul.recs li{margin:6px 0}
+.seg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.chart-wrap{overflow-x:auto}
+svg text{fill:var(--muted);font-family:inherit}
+.disclaimer{font-size:.85rem;color:var(--muted);margin-top:20px}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+#results{display:none}
+@media print{
+  #formCard,.btns,.topbar button{display:none!important}
+  body{background:#fff}
+  .card{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <div>
+      <h1>แปลผล InBody</h1>
+      <p>กรอกตัวเลขจากใบผลวัดองค์ประกอบร่างกาย (InBody / ACCUNIQ) แล้วรับคำอธิบายภาษาไทยที่เข้าใจง่าย</p>
+    </div>
+    <button class="ghost" id="themeBtn" title="สลับโหมดสว่าง/มืด">◐</button>
+  </header>
+
+  <section class="card" id="formCard">
+    <h2>1. กรอกข้อมูลจากใบผล</h2>
+    <p class="hint">ช่องที่ไม่มีในใบผลของคุณเว้นว่างได้ ช่อง “ช่วงปกติ” ให้กรอกตามตัวเลขในวงเล็บบนใบผล (ถ้าไม่กรอก ระบบจะประเมินจากเกณฑ์ทั่วไป)</p>
+    <div class="btns">
+      <button class="ghost" id="sampleBtn" type="button">ใส่ข้อมูลตัวอย่าง</button>
+      <button class="ghost" id="clearBtn" type="button">ล้างข้อมูล</button>
+    </div>
+    <form id="form" autocomplete="off"></form>
+    <div class="btns">
+      <button id="runBtn" type="button">แปลผล</button>
+    </div>
+  </section>
+
+  <div id="results"></div>
+
+  <p class="disclaimer">ข้อมูลในเว็บนี้เป็นการอธิบายผลเพื่อความเข้าใจทั่วไปเท่านั้น ไม่ใช่การวินิจฉัยทางการแพทย์ หากมีโรคประจำตัว ตั้งครรภ์ หรือมีข้อสงสัย ควรปรึกษาแพทย์ นักกำหนดอาหาร หรือผู้เชี่ยวชาญ ข้อมูลที่กรอกจะถูกเก็บไว้ในเบราว์เซอร์ของคุณเท่านั้น ไม่ถูกส่งไปที่ใด</p>
+</div>
+
+<script>
+// ---------- schema ของฟอร์ม ----------
+const SECTIONS = [
+  { title: "ข้อมูลส่วนตัว", open: true, fields: [
+    { id: "sex", label: "เพศ", type: "select", options: [["male","ชาย"],["female","หญิง"]] },
+    { id: "age", label: "อายุ (ปี)" },
+    { id: "height", label: "ส่วนสูง (ซม.)" },
+    { id: "date", label: "วันที่วัด", type: "text" },
+  ]},
+  { title: "องค์ประกอบร่างกาย", open: true, fields: [
+    { id: "weight", label: "น้ำหนัก (กก.)", range: true },
+    { id: "tbw", label: "น้ำในร่างกาย (ลิตร)", range: true },
+    { id: "protein", label: "โปรตีน (กก.)", range: true },
+    { id: "mineral", label: "แร่ธาตุ / กระดูก (กก.)", range: true },
+    { id: "fat", label: "มวลไขมัน (กก.)", range: true },
+    { id: "slm", label: "กล้ามเนื้อ (กก.)", range: true },
+    { id: "ffm", label: "มวลกายไร้ไขมัน (กก.)", range: true },
+    { id: "smm", label: "กล้ามเนื้อลาย (กก.)", range: true },
+  ]},
+  { title: "ดัชนีโรคอ้วน", open: true, fields: [
+    { id: "bmi", label: "BMI (กก./ม²) – เว้นว่างได้" },
+    { id: "pbf", label: "% ไขมัน" },
+    { id: "whr", label: "รอบเอวต่อสะโพก (WHR)" },
+    { id: "vfl", label: "ระดับไขมันในช่องท้อง (level)" },
+    { id: "vfa", label: "พื้นที่ไขมันช่องท้อง (ตร.ซม.)" },
+    { id: "waist", label: "เส้นรอบเอว (ซม.)" },
+    { id: "edema", label: "ภาวะบวมน้ำ (ECW/TBW)" },
+  ]},
+  { title: "การประเมินโดยรวมและแนวทางควบคุม", open: false, fields: [
+    { id: "bmr", label: "พลังงานพื้นฐาน BMR (kcal)" },
+    { id: "tdee", label: "พลังงานที่ต้องการต่อวัน (kcal)" },
+    { id: "bodyAge", label: "อายุร่างกาย (ปี)" },
+    { id: "score", label: "คะแนนร่างกาย" },
+    { id: "bcm", label: "มวลเซลล์ในร่างกาย (กก.)" },
+    { id: "obesity", label: "ระดับความอ้วน (%)" },
+    { id: "targetWeight", label: "น้ำหนักเป้าหมาย (กก.)" },
+    { id: "muscleControl", label: "การควบคุมกล้ามเนื้อ (กก.)" },
+    { id: "fatControl", label: "การควบคุมไขมัน (กก.)" },
+  ]},
+  { title: "กล้ามเนื้อแยกส่วน (กก.)", open: false, fields: [
+    { id: "raL", label: "แขนขวา", range: true },
+    { id: "laL", label: "แขนซ้าย", range: true },
+    { id: "trL", label: "ลำตัว", range: true },
+    { id: "rlL", label: "ขาขวา", range: true },
+    { id: "llL", label: "ขาซ้าย", range: true },
+  ]},
+  { title: "ไขมันแยกส่วน (กก.)", open: false, fields: [
+    { id: "raF", label: "แขนขวา" },
+    { id: "laF", label: "แขนซ้าย" },
+    { id: "trF", label: "ลำตัว" },
+    { id: "rlF", label: "ขาขวา" },
+    { id: "llF", label: "ขาซ้าย" },
+  ]},
+];
+
+const SAMPLE = {
+  sex:"male", age:28, height:172, date:"29-12-2022",
+  weight:70.9, weightMin:55.3, weightMax:74.8,
+  tbw:39.6, tbwMin:35.3, tbwMax:43.1,
+  protein:10.6, proteinMin:9.7, proteinMax:11.9,
+  mineral:3.7, mineralMin:3.3, mineralMax:4.1,
+  fat:17.0, fatMin:9.1, fatMax:13.7,
+  slm:50.2, slmMin:45.0, slmMax:55.0,
+  ffm:53.9, ffmMin:48.3, ffmMax:59.1,
+  smm:30.1,
+  bmi:24.0, pbf:23.9, whr:0.82, vfl:7, vfa:68, waist:88.5, edema:0.371,
+  bmr:1535, tdee:2363, bodyAge:29, score:73, bcm:35.5, obesity:8.9,
+  targetWeight:65.4, muscleControl:0, fatControl:-5.5,
+  raL:2.93, raLMin:2.75, raLMax:3.36, laL:2.87, laLMin:2.75, laLMax:3.36,
+  trL:23.82, trLMin:20.70, trLMax:25.30, rlL:8.28, rlLMin:7.60, rlLMax:9.28,
+  llL:8.30, llLMin:7.60, llLMax:9.28,
+  raF:0.98, laF:1.00, trF:8.72, rlF:2.45, llF:2.45,
+  history:"10-11-2020, 66.1, 30.0, 19.0\n13-12-2021, 69.4, 30.2, 22.3\n14-03-2022, 69.1, 30.3, 21.7\n29-12-2022, 70.9, 30.1, 23.9",
+};
+
+const STORE_KEY = "inbody-interpreter-v1";
+
+// ---------- สร้างฟอร์ม ----------
+function buildForm(){
+  const form = document.getElementById("form");
+  let html = "";
+  for (const sec of SECTIONS){
+    html += `<details ${sec.open ? "open" : ""}><summary>${sec.title}</summary><div class="grid">`;
+    for (const f of sec.fields){
+      let input;
+      if (f.type === "select"){
+        input = `<select id="${f.id}">${f.options.map(([v,t]) => `<option value="${v}">${t}</option>`).join("")}</select>`;
+      } else {
+        const t = f.type === "text" ? "text" : "number";
+        input = `<input id="${f.id}" type="${t}" step="any" inputmode="decimal">`;
+      }
+      if (f.range){
+        input = `<div class="field">${input}<input class="r" id="${f.id}Min" type="number" step="any" placeholder="ต่ำสุด" title="ช่วงปกติ ต่ำสุด"><input class="r" id="${f.id}Max" type="number" step="any" placeholder="สูงสุด" title="ช่วงปกติ สูงสุด"></div>`;
+      }
+      html += `<div><label for="${f.id}">${f.label}${f.range ? " · ค่า / ช่วงปกติ" : ""}</label>${input}</div>`;
+    }
+    html += `</div></details>`;
+  }
+  html += `<details><summary>ประวัติการวัด (สำหรับดูแนวโน้ม)</summary>
+    <p class="hint">บรรทัดละ 1 ครั้ง รูปแบบ: <code>วันที่, น้ำหนัก, กล้ามเนื้อลาย, %ไขมัน</code></p>
+    <textarea id="history" placeholder="10-11-2020, 66.1, 30.0, 19.0"></textarea></details>`;
+  form.innerHTML = html;
+}
+
+function allIds(){
+  const ids = ["history"];
+  for (const sec of SECTIONS) for (const f of sec.fields){
+    ids.push(f.id);
+    if (f.range) ids.push(f.id + "Min", f.id + "Max");
+  }
+  return ids;
+}
+
+function readForm(){
+  const d = {};
+  for (const id of allIds()){
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (el.type === "number"){
+      d[id] = el.value === "" ? null : Number(el.value);
+    } else d[id] = el.value;
+  }
+  return d;
+}
+
+function fillForm(data){
+  for (const id of allIds()){
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const v = data[id];
+    el.value = v === undefined || v === null ? (el.tagName === "SELECT" ? el.options[0].value : "") : v;
+  }
+}
+
+function save(d){ try { localStorage.setItem(STORE_KEY, JSON.stringify(d)); } catch(e){} }
+function load(){ try { return JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch(e){ return null; } }
+
+// ---------- helpers ----------
+const has = v => v !== null && v !== undefined && !Number.isNaN(v);
+const fmt = (v, dp = 1) => has(v) ? Number(v).toLocaleString("th-TH", { minimumFractionDigits: dp, maximumFractionDigits: dp }) : "–";
+const LABEL = { good: "ปกติ", warn: "ควรระวัง", bad: "เกินเกณฑ์", low: "ต่ำกว่าเกณฑ์", high: "สูงกว่าเกณฑ์", info: "ข้อมูล" };
+
+function rangeStatus(v, min, max){
+  if (!has(v) || !has(min) || !has(max)) return null;
+  if (v < min) return { cls: "warn", text: LABEL.low };
+  if (v > max) return { cls: "warn", text: LABEL.high };
+  return { cls: "good", text: LABEL.good };
+}
+
+function pill(st){ return st ? `<span class="pill bg-${st.cls} ${st.cls}">${st.text}</span>` : ""; }
+
+// แถบแสดงตำแหน่งค่า เทียบช่วงปกติ
+function bar(v, min, max, cls){
+  if (!has(v) || !has(min) || !has(max)) return "";
+  const lo = Math.min(v, min) - (max - min) * 0.6;
+  const hi = Math.max(v, max) + (max - min) * 0.6;
+  const p = x => ((x - lo) / (hi - lo)) * 100;
+  return `<div class="bar" aria-hidden="true"><div class="band" style="left:${p(min)}%;width:${p(max) - p(min)}%"></div>
+    <div class="dot" style="left:${p(v)}%;background:var(--${cls || "accent"})"></div></div>`;
+}
+
+function metric({ name, value, unit, dp = 1, min, max, status, desc, msg }){
+  if (!has(value)) return "";
+  return `<div class="metric">
+    <div class="mhead"><span class="mname">${name}</span>
+      <span><span class="mval">${fmt(value, dp)}</span> ${unit || ""} ${pill(status)}</span></div>
+    ${bar(value, min, max, status && status.cls)}
+    ${has(min) && has(max) ? `<div class="hint">ช่วงปกติ ${fmt(min, dp)} – ${fmt(max, dp)} ${unit || ""}</div>` : ""}
+    ${msg ? `<p class="mmsg">${msg}</p>` : ""}
+    <p class="mdesc">${desc}</p></div>`;
+}
+
+// ---------- เกณฑ์ประเมิน ----------
+function bmiStatus(b){
+  // เกณฑ์ BMI สำหรับคนเอเชีย (WHO Asia-Pacific)
+  if (b < 18.5) return { cls: "warn", text: "น้ำหนักน้อย", msg: "ต่ำกว่าเกณฑ์ ควรเพิ่มพลังงานและโปรตีนจากอาหาร" };
+  if (b < 23) return { cls: "good", text: "ปกติ", msg: "อยู่ในเกณฑ์ปกติสำหรับคนเอเชีย" };
+  if (b < 25) return { cls: "warn", text: "น้ำหนักเกิน", msg: "อยู่ในช่วงน้ำหนักเกินเล็กน้อย (23–24.9) สำหรับคนเอเชีย ควรดู % ไขมันประกอบ เพราะคนที่มีกล้ามเนื้อมากก็อาจมี BMI สูงได้" };
+  if (b < 30) return { cls: "bad", text: "อ้วนระดับ 1", msg: "อยู่ในเกณฑ์อ้วนระดับ 1 (25–29.9) เพิ่มความเสี่ยงโรคเบาหวาน ความดัน ไขมันในเลือด" };
+  return { cls: "bad", text: "อ้วนระดับ 2", msg: "อยู่ในเกณฑ์อ้วนระดับ 2 (≥30) ควรปรึกษาแพทย์เพื่อวางแผนลดน้ำหนัก" };
+}
+
+function pbfStatus(p, sex){
+  const [n1, n2, n3] = sex === "female" ? [18, 28, 33] : [10, 20, 25];
+  const range = { min: n1, max: n2 };
+  if (p < n1) return { ...range, cls: "warn", text: "ไขมันต่ำ", msg: `ต่ำกว่าเกณฑ์ (${n1}–${n2}%) ไขมันน้อยเกินไปอาจกระทบฮอร์โมนและภูมิคุ้มกัน` };
+  if (p <= n2) return { ...range, cls: "good", text: "ปกติ", msg: `อยู่ในเกณฑ์ปกติ (${n1}–${n2}%)` };
+  if (p <= n3) return { ...range, cls: "warn", text: "ไขมันค่อนข้างสูง", msg: `สูงกว่าเกณฑ์ปกติ (${n1}–${n2}%) เล็กน้อย เป็นช่วงที่ควรเริ่มลดไขมันก่อนเข้าสู่ภาวะอ้วน` };
+  return { ...range, cls: "bad", text: "อ้วน (ไขมันสูง)", msg: `สูงเกิน ${n3}% ถือว่าอยู่ในภาวะอ้วนจากไขมัน ควรลดไขมันอย่างจริงจัง` };
+}
+
+function vflStatus(l){
+  if (l < 10) return { cls: "good", text: "ปกติ", msg: "ไขมันในช่องท้องอยู่ในเกณฑ์ปกติ (1–9)" };
+  if (l < 15) return { cls: "warn", text: "สูง", msg: "ไขมันในช่องท้องสูง (10–14) เพิ่มความเสี่ยงโรคหัวใจและเบาหวาน" };
+  return { cls: "bad", text: "สูงมาก", msg: "ไขมันในช่องท้องสูงมาก (≥15) ควรปรึกษาแพทย์และลดไขมันอย่างเร่งด่วน" };
+}
+
+function analyze(d){
+  const sex = d.sex || "male";
+  const h = has(d.height) ? d.height / 100 : null;
+  const bmi = has(d.bmi) ? d.bmi : (h && has(d.weight) ? d.weight / (h * h) : null);
+  const stdWeight = h ? 22 * h * h : null;
+  // ถ้าไม่ได้กรอกช่วงน้ำหนัก ใช้ 85–115% ของน้ำหนักมาตรฐาน (BMI 22)
+  if (stdWeight && !has(d.weightMin)) d.weightMin = +(stdWeight * 0.85).toFixed(1);
+  if (stdWeight && !has(d.weightMax)) d.weightMax = +(stdWeight * 1.15).toFixed(1);
+  const pbf = has(d.pbf) ? d.pbf : (has(d.fat) && has(d.weight) ? d.fat / d.weight * 100 : null);
+  return { sex, h, bmi, stdWeight, pbf };
+}
+
+// ---------- แสดงผล ----------
+function render(d){
+  const a = analyze(d);
+  const out = [];
+  const tiles = [];
+  const recs = [];
+  const sexTh = a.sex === "female" ? "หญิง" : "ชาย";
+
+  const bmiSt = has(a.bmi) ? bmiStatus(a.bmi) : null;
+  const pbfSt = has(a.pbf) ? pbfStatus(a.pbf, a.sex) : null;
+  const vflSt = has(d.vfl) ? vflStatus(d.vfl) : null;
+  const whrLim = a.sex === "female" ? 0.85 : 0.90;
+  const waistLim = a.sex === "female" ? 80 : 90;
+  const whrSt = has(d.whr) ? (d.whr <= whrLim ? { cls: "good", text: "ปกติ" } : { cls: "bad", text: "อ้วนลงพุง" }) : null;
+  const waistSt = has(d.waist) ? (d.waist < waistLim ? { cls: "good", text: "ปกติ" } : { cls: "bad", text: "เกินเกณฑ์" }) : null;
+
+  // ประเภทร่างกาย (จากน้ำหนัก × %ไขมัน)
+  let bodyType = null;
+  if (bmiSt && pbfSt){
+    const heavy = a.bmi >= 23, fatHigh = pbfSt.cls !== "good" && a.pbf > pbfSt.max, fatLow = a.pbf < pbfSt.min;
+    if (!heavy && fatHigh) bodyType = { t: "ผอมแต่ไขมันสูง (Skinny fat)", cls: "warn", m: "น้ำหนักดูปกติ แต่สัดส่วนไขมันสูงและกล้ามเนื้อน้อย ควรเน้นเพิ่มกล้ามเนื้อมากกว่าลดน้ำหนัก" };
+    else if (heavy && fatHigh) bodyType = { t: "น้ำหนักเกินจากไขมัน", cls: a.bmi >= 25 || a.pbf > (a.sex === "female" ? 33 : 25) ? "bad" : "warn", m: "น้ำหนักที่เกินมาส่วนใหญ่มาจากไขมัน เป้าหมายหลักคือลดไขมันโดยรักษากล้ามเนื้อไว้" };
+    else if (heavy && !fatHigh) bodyType = { t: "น้ำหนักมากจากกล้ามเนื้อ", cls: "good", m: "BMI สูงแต่ % ไขมันปกติ แปลว่ามีกล้ามเนื้อมาก ไม่ได้อ้วน" };
+    else if (!heavy && fatLow) bodyType = { t: "ผอม / ไขมันต่ำ", cls: "warn", m: "ควรเพิ่มพลังงานจากอาหารและฝึกเวทเพื่อเพิ่มกล้ามเนื้อ" };
+    else bodyType = { t: "สมส่วน", cls: "good", m: "น้ำหนักและสัดส่วนไขมันอยู่ในเกณฑ์ดี รักษาพฤติกรรมเดิมไว้" };
+  }
+
+  if (bodyType) tiles.push(`<div class="tile bg-${bodyType.cls}"><div class="k">ประเภทร่างกาย</div><div class="v ${bodyType.cls}" style="font-size:1.1rem">${bodyType.t}</div></div>`);
+  if (has(d.weight)) tiles.push(tile("น้ำหนัก", fmt(d.weight) + " กก.", rangeStatus(d.weight, d.weightMin, d.weightMax)));
+  if (bmiSt) tiles.push(tile("BMI", fmt(a.bmi), bmiSt));
+  if (pbfSt) tiles.push(tile("% ไขมัน", fmt(a.pbf) + "%", pbfSt));
+  if (has(d.smm)) tiles.push(tile("กล้ามเนื้อลาย", fmt(d.smm) + " กก.", rangeStatus(d.smm, d.smmMin, d.smmMax) || { cls: "info", text: `${fmt(d.smm / d.weight * 100)}% ของน้ำหนัก` }));
+  if (vflSt) tiles.push(tile("ไขมันช่องท้อง", "ระดับ " + fmt(d.vfl, 0), vflSt));
+  if (has(d.score)) tiles.push(tile("คะแนนร่างกาย", fmt(d.score, 0), d.score >= 80 ? { cls: "good", text: "ดี" } : d.score >= 70 ? { cls: "warn", text: "พอใช้ ควรปรับปรุง" } : { cls: "bad", text: "ควรปรับปรุง" }));
+  if (has(d.bodyAge) && has(d.age)) tiles.push(tile("อายุร่างกาย", fmt(d.bodyAge, 0) + " ปี", d.bodyAge <= d.age ? { cls: "good", text: "ไม่เกินอายุจริง" } : { cls: "warn", text: `มากกว่าอายุจริง ${d.bodyAge - d.age} ปี` }));
+
+  out.push(`<section class="card"><h2>สรุปผล${d.date ? " · " + esc(d.date) : ""}</h2>
+    <p class="hint">${sexTh}${has(d.age) ? " อายุ " + d.age + " ปี" : ""}${has(d.height) ? " ส่วนสูง " + d.height + " ซม." : ""}</p>
+    <div class="summary-grid">${tiles.join("")}</div>
+    ${bodyType ? `<p class="mmsg" style="margin-top:12px"><b>สรุป:</b> ${bodyType.m}</p>` : ""}</section>`);
+
+  // --- องค์ประกอบร่างกาย
+  const comp = [
+    metric({ name: "น้ำหนัก", value: d.weight, unit: "กก.", min: d.weightMin, max: d.weightMax, status: rangeStatus(d.weight, d.weightMin, d.weightMax),
+      desc: "น้ำหนักตัวรวม = น้ำ + โปรตีน + แร่ธาตุ + ไขมัน ช่วงปกติคำนวณจากส่วนสูง (85–115% ของน้ำหนักมาตรฐาน)",
+      msg: a.stdWeight ? `น้ำหนักมาตรฐานสำหรับส่วนสูงนี้ประมาณ ${fmt(a.stdWeight)} กก. (ต่างจากปัจจุบัน ${signed(d.weight - a.stdWeight)} กก.)` : "" }),
+    metric({ name: "น้ำในร่างกาย (Total Body Water)", value: d.tbw, unit: "ลิตร", min: d.tbwMin, max: d.tbwMax, status: rangeStatus(d.tbw, d.tbwMin, d.tbwMax),
+      desc: "น้ำทั้งหมดในร่างกาย ส่วนใหญ่อยู่ในกล้ามเนื้อ ถ้าต่ำมักสัมพันธ์กับกล้ามเนื้อน้อยหรือดื่มน้ำไม่พอ" }),
+    metric({ name: "โปรตีน", value: d.protein, unit: "กก.", min: d.proteinMin, max: d.proteinMax, status: rangeStatus(d.protein, d.proteinMin, d.proteinMax),
+      desc: "โปรตีนที่สะสมในเซลล์ เป็นตัวบ่งชี้ภาวะโภชนาการและปริมาณกล้ามเนื้อ" }),
+    metric({ name: "แร่ธาตุ / กระดูก", value: d.mineral, unit: "กก.", dp: 2, min: d.mineralMin, max: d.mineralMax, status: rangeStatus(d.mineral, d.mineralMin, d.mineralMax),
+      desc: "แร่ธาตุในกระดูกและเนื้อเยื่อ ถ้าต่ำกว่าเกณฑ์ควรเพิ่มแคลเซียม วิตามินดี และออกกำลังกายแบบลงน้ำหนัก" }),
+    metric({ name: "มวลไขมัน", value: d.fat, unit: "กก.", min: d.fatMin, max: d.fatMax, status: rangeStatus(d.fat, d.fatMin, d.fatMax),
+      desc: "น้ำหนักของไขมันทั้งหมดในร่างกาย",
+      msg: has(d.fat) && has(d.fatMax) && d.fat > d.fatMax ? `มีไขมันเกินขอบบนของเกณฑ์ประมาณ <b>${fmt(d.fat - d.fatMax)} กก.</b>` : "" }),
+    metric({ name: "กล้ามเนื้อ (Soft Lean Mass)", value: d.slm, unit: "กก.", min: d.slmMin, max: d.slmMax, status: rangeStatus(d.slm, d.slmMin, d.slmMax),
+      desc: "กล้ามเนื้อทั้งหมดรวมกล้ามเนื้ออวัยวะภายใน (น้ำ + โปรตีน)" }),
+    metric({ name: "มวลกายไร้ไขมัน (Fat Free Mass)", value: d.ffm, unit: "กก.", min: d.ffmMin, max: d.ffmMax, status: rangeStatus(d.ffm, d.ffmMin, d.ffmMax),
+      desc: "ทุกอย่างในร่างกายที่ไม่ใช่ไขมัน (กล้ามเนื้อ + กระดูก + น้ำ) ยิ่งมากยิ่งเผาผลาญพลังงานได้ดี" }),
+    metric({ name: "กล้ามเนื้อลาย (Skeletal Muscle Mass)", value: d.smm, unit: "กก.", min: d.smmMin, max: d.smmMax, status: rangeStatus(d.smm, d.smmMin, d.smmMax),
+      desc: "กล้ามเนื้อที่ใช้เคลื่อนไหว เพิ่มได้ด้วยการฝึกเวทและกินโปรตีนเพียงพอ เป็นตัวเลขสำคัญที่สุดในการติดตามผลการออกกำลังกาย",
+      msg: has(d.smm) && has(d.weight) ? `คิดเป็น ${fmt(d.smm / d.weight * 100)}% ของน้ำหนักตัว (โดยทั่วไป${a.sex === "female" ? "ผู้หญิง ≥ 36%" : "ผู้ชาย ≥ 40%"} ถือว่าดี)` : "" }),
+  ].join("");
+  if (comp) out.push(`<section class="card"><h2>องค์ประกอบร่างกาย</h2>${comp}</section>`);
+
+  // --- ภาวะอ้วน
+  const ob = [
+    metric({ name: "BMI (ดัชนีมวลกาย)", value: a.bmi, unit: "กก./ม²", min: 18.5, max: 22.9, status: bmiSt,
+      desc: "น้ำหนัก ÷ ส่วนสูง² ใช้คัดกรองเบื้องต้น แต่แยกไม่ได้ว่าน้ำหนักมาจากไขมันหรือกล้ามเนื้อ", msg: bmiSt && bmiSt.msg }),
+    metric({ name: "เปอร์เซ็นต์ไขมัน (PBF)", value: a.pbf, unit: "%", min: pbfSt && pbfSt.min, max: pbfSt && pbfSt.max, status: pbfSt,
+      desc: "สัดส่วนไขมันต่อน้ำหนักตัว บอกภาวะอ้วนได้แม่นกว่า BMI", msg: pbfSt && pbfSt.msg }),
+    metric({ name: "รอบเอวต่อสะโพก (WHR)", value: d.whr, unit: "", dp: 2, min: a.sex === "female" ? 0.70 : 0.75, max: whrLim, status: whrSt,
+      desc: "ใช้ประเมินภาวะอ้วนลงพุง", msg: whrSt ? (whrSt.cls === "good" ? `ไม่เกิน ${whrLim} ไม่มีภาวะอ้วนลงพุง` : `เกิน ${whrLim} มีแนวโน้มอ้วนลงพุง`) : "" }),
+    metric({ name: "ระดับไขมันในช่องท้อง", value: d.vfl, unit: "", dp: 0, min: 1, max: 9, status: vflSt,
+      desc: "ไขมันที่ห่อหุ้มอวัยวะภายใน อันตรายกว่าไขมันใต้ผิวหนัง เกี่ยวข้องกับเบาหวาน ไขมันพอกตับ และโรคหัวใจ", msg: vflSt && vflSt.msg }),
+    metric({ name: "พื้นที่ไขมันในช่องท้อง (VFA)", value: d.vfa, unit: "ตร.ซม.", dp: 0, min: 0, max: 100, status: has(d.vfa) ? (d.vfa < 100 ? { cls: "good", text: "ปกติ" } : { cls: "bad", text: "สูง" }) : null,
+      desc: "ค่าไม่ควรเกิน 100 ตร.ซม." }),
+    metric({ name: "เส้นรอบเอว", value: d.waist, unit: "ซม.", min: 60, max: waistLim, status: waistSt,
+      desc: `เกณฑ์คนไทย: ${a.sex === "female" ? "ผู้หญิงไม่ควรเกิน 80 ซม." : "ผู้ชายไม่ควรเกิน 90 ซม."} (หรือไม่เกินส่วนสูง ÷ 2${a.h ? " = " + fmt(a.h * 50) + " ซม." : ""})`,
+      msg: has(d.waist) && a.h && d.waist > a.h * 50 ? `รอบเอวเกินส่วนสูง ÷ 2 อยู่ ${fmt(d.waist - a.h * 50)} ซม.` : (waistSt && waistSt.cls === "good" ? "อยู่ในเกณฑ์" : "") }),
+    metric({ name: "ภาวะบวมน้ำ (ECW/TBW)", value: d.edema, unit: "", dp: 3, min: 0.36, max: 0.39,
+      status: has(d.edema) ? (d.edema <= 0.39 ? { cls: "good", text: "ปกติ" } : d.edema <= 0.40 ? { cls: "warn", text: "บวมเล็กน้อย" } : { cls: "bad", text: "บวมน้ำ" }) : null,
+      desc: "สัดส่วนน้ำนอกเซลล์ต่อน้ำทั้งหมด ปกติ 0.36–0.39 ถ้าสูงอาจมีภาวะบวม อักเสบ หรือปัญหาไต/หัวใจ" }),
+  ].join("");
+  if (ob) out.push(`<section class="card"><h2>ภาวะโรคอ้วนและอ้วนลงพุง</h2>${ob}</section>`);
+
+  // --- พลังงาน
+  const en = [];
+  if (has(d.bmr)) en.push(`<li><b>BMR ${fmt(d.bmr, 0)} kcal</b> – พลังงานขั้นต่ำที่ร่างกายใช้ขณะพักเฉย ๆ ทั้งวัน ไม่ควรกินต่ำกว่านี้</li>`);
+  if (has(d.tdee)) en.push(`<li><b>พลังงานที่ต้องการต่อวัน ${fmt(d.tdee, 0)} kcal</b> – ถ้ากินเท่านี้น้ำหนักจะคงที่</li>`);
+  if (has(d.bcm)) en.push(`<li><b>มวลเซลล์ ${fmt(d.bcm)} กก.</b> – ปริมาณเซลล์ที่ทำงาน (โปรตีน + น้ำในเซลล์) บ่งบอกภาวะโภชนาการ</li>`);
+  if (has(d.obesity)) en.push(`<li><b>ระดับความอ้วน ${signed(d.obesity)}%</b> – เทียบน้ำหนักกับน้ำหนักมาตรฐาน ${d.obesity > 10 ? "<span class='bad'>เกินช่วงปกติ (±10%)</span>" : d.obesity < -10 ? "<span class='warn'>ต่ำกว่าช่วงปกติ (±10%)</span>" : "<span class='good'>อยู่ในช่วงปกติ (±10%)</span>"}${d.obesity > 5 && d.obesity <= 10 ? " แต่ใกล้ขอบบนแล้ว" : ""}</li>`);
+  if (has(d.bodyAge) && has(d.age)) en.push(`<li><b>อายุร่างกาย ${d.bodyAge} ปี</b> เทียบอายุจริง ${d.age} ปี – ${d.bodyAge > d.age ? "ร่างกายเสื่อมเร็วกว่าอายุจริงเล็กน้อย มักเกิดจากไขมันสูง/กล้ามเนื้อน้อย" : "ร่างกายสมวัยหรืออ่อนกว่าวัย"}</li>`);
+  if (has(d.score)) en.push(`<li><b>คะแนนร่างกาย ${d.score}</b> – คะแนนเต็ม 100 (80 ขึ้นไปถือว่าดี) ถ้าเพิ่มกล้ามเนื้อและลดไขมัน คะแนนจะสูงขึ้น</li>`);
+  if (en.length) out.push(`<section class="card"><h2>การประเมินโดยรวม</h2><ul class="recs">${en.join("")}</ul></section>`);
+
+  // --- แยกส่วน
+  const segParts = [["raL","laL","แขนขวา","แขนซ้าย"],["rlL","llL","ขาขวา","ขาซ้าย"]];
+  const segNames = { raL: "แขนขวา", laL: "แขนซ้าย", trL: "ลำตัว", rlL: "ขาขวา", llL: "ขาซ้าย" };
+  const segTiles = Object.entries(segNames).filter(([k]) => has(d[k])).map(([k, n]) => tile(n, fmt(d[k], 2) + " กก.", rangeStatus(d[k], d[k + "Min"], d[k + "Max"]))).join("");
+  const fatNames = { raF: "แขนขวา", laF: "แขนซ้าย", trF: "ลำตัว", rlF: "ขาขวา", llF: "ขาซ้าย" };
+  const fatTiles = Object.entries(fatNames).filter(([k]) => has(d[k])).map(([k, n]) => tile(n, fmt(d[k], 2) + " กก.", null)).join("");
+  if (segTiles || fatTiles){
+    const notes = [];
+    for (const [r, l, rn, ln] of segParts){
+      if (has(d[r]) && has(d[l])){
+        const diff = Math.abs(d[r] - d[l]) / Math.max(d[r], d[l]) * 100;
+        notes.push(`<li>${rn} vs ${ln}: ต่างกัน ${fmt(diff)}% – ${diff <= 5 ? "<span class='good'>สมดุลดี</span>" : diff <= 10 ? "<span class='warn'>ไม่สมดุลเล็กน้อย ควรฝึกข้างที่อ่อนกว่าเพิ่ม</span>" : "<span class='bad'>ไม่สมดุลชัดเจน ควรฝึกแยกข้างหรือปรึกษาผู้เชี่ยวชาญ</span>"}</li>`);
+      }
+    }
+    if (has(d.raL) && has(d.rlL) && has(d.laL) && has(d.llL)){
+      const ratio = (d.raL + d.laL) / (d.rlL + d.llL);
+      notes.push(`<li>กล้ามเนื้อแขนต่อขา = ${fmt(ratio, 2)} – ${ratio < 0.3 ? "ร่างกายส่วนบนค่อนข้างน้อยเมื่อเทียบกับขา ควรเพิ่มท่าฝึกแขน อก หลัง" : "สัดส่วนบน-ล่างอยู่ในเกณฑ์ทั่วไป"}</li>`);
+    }
+    const fatSum = ["raF","laF","trF","rlF","llF"].filter(k => has(d[k])).reduce((s, k) => s + d[k], 0);
+    if (has(d.trF) && fatSum) notes.push(`<li>ไขมันสะสมที่ลำตัว ${fmt(d.trF, 2)} กก. คิดเป็น ${fmt(d.trF / fatSum * 100, 0)}% ของไขมันที่วัดแยกส่วน ${d.trF / fatSum > 0.55 ? "– <span class='warn'>ไขมันสะสมที่ลำตัว/หน้าท้องเป็นหลัก</span>" : ""}</li>`);
+    out.push(`<section class="card"><h2>วิเคราะห์แยกส่วน</h2>
+      ${segTiles ? `<h3>กล้ามเนื้อ</h3><div class="seg">${segTiles}</div>` : ""}
+      ${fatTiles ? `<h3>ไขมัน</h3><div class="seg">${fatTiles}</div>` : ""}
+      ${notes.length ? `<ul class="recs">${notes.join("")}</ul>` : ""}</section>`);
+  }
+
+  // --- ประวัติ
+  const hist = parseHistory(d.history);
+  if (hist.length >= 2){
+    const f = hist[0], l = hist[hist.length - 1];
+    const fatF = f.w * f.p / 100, fatL = l.w * l.p / 100;
+    const dW = l.w - f.w, dFat = fatL - fatF, dS = l.s - f.s;
+    let insight = `ตั้งแต่ ${esc(f.date)} ถึง ${esc(l.date)} น้ำหนักเปลี่ยน <b>${signed(dW)} กก.</b>, มวลไขมัน (คำนวณ) <b>${signed(dFat)} กก.</b>, กล้ามเนื้อลาย <b>${signed(dS)} กก.</b>`;
+    if (dW > 0.5 && dFat > dW * 0.6) insight += ` → <span class="bad">น้ำหนักที่เพิ่มขึ้นส่วนใหญ่ (${fmt(Math.min(dFat / dW, 1) * 100, 0)}%) มาจากไขมัน</span> ไม่ใช่กล้ามเนื้อ`;
+    else if (dW < -0.5 && dFat < 0 && dS >= -0.3) insight += ` → <span class="good">ลดน้ำหนักได้ดี ลดไขมันโดยรักษากล้ามเนื้อไว้ได้</span>`;
+    else if (dW < -0.5 && dS < -0.5) insight += ` → <span class="warn">น้ำหนักลดแต่เสียกล้ามเนื้อด้วย ควรเพิ่มโปรตีนและฝึกเวท</span>`;
+    else if (dS > 0.5 && dFat <= 0) insight += ` → <span class="good">เพิ่มกล้ามเนื้อและลดไขมันได้ (Body recomposition)</span>`;
+    out.push(`<section class="card"><h2>แนวโน้มจากประวัติการวัด</h2>
+      <p class="mmsg">${insight}</p>
+      <div class="chart-wrap">${chart(hist, "w", "น้ำหนัก (กก.)", "var(--accent)")}${chart(hist, "s", "กล้ามเนื้อลาย (กก.)", "var(--good)")}${chart(hist, "p", "% ไขมัน", "var(--bad)")}</div></section>`);
+  }
+
+  // --- คำแนะนำ
+  const weightForRec = has(d.targetWeight) ? d.targetWeight : (a.stdWeight || d.weight);
+  if (has(d.fatControl) && d.fatControl < 0){
+    const kg = -d.fatControl;
+    recs.push(`<b>เป้าหมาย: ลดไขมัน ${fmt(kg)} กก.</b>${has(d.targetWeight) ? ` ให้น้ำหนักเหลือประมาณ ${fmt(d.targetWeight)} กก.` : ""} ลดสัปดาห์ละ 0.25–0.5 กก. จะใช้เวลาประมาณ <b>${Math.ceil(kg / 0.5)}–${Math.ceil(kg / 0.25)} สัปดาห์</b> (ลดช้า ๆ จะรักษากล้ามเนื้อไว้ได้ดีกว่า)`);
+  } else if (pbfSt && a.pbf > pbfSt.max && has(d.weight)){
+    const targetFat = d.weight * (1 - a.pbf / 100) / (1 - pbfSt.max / 100) * (pbfSt.max / 100);
+    const kg = d.fat ? d.fat - targetFat : d.weight * a.pbf / 100 - targetFat;
+    if (kg > 0) recs.push(`<b>เป้าหมาย: ลดไขมันประมาณ ${fmt(kg)} กก.</b> เพื่อให้ % ไขมันลงมาที่ ${pbfSt.max}% ใช้เวลาประมาณ ${Math.ceil(kg / 0.5)}–${Math.ceil(kg / 0.25)} สัปดาห์`);
+  }
+  if (has(d.muscleControl)){
+    recs.push(d.muscleControl > 0 ? `<b>เพิ่มกล้ามเนื้อ ${fmt(d.muscleControl)} กก.</b> ด้วยการฝึกเวทอย่างน้อย 3 ครั้ง/สัปดาห์ ควบคู่กับโปรตีนเพียงพอ`
+      : `<b>รักษากล้ามเนื้อเดิมไว้</b> (ไม่จำเป็นต้องเพิ่ม) แต่ต้องฝึกเวท 2–3 ครั้ง/สัปดาห์ระหว่างลดไขมัน เพื่อไม่ให้กล้ามเนื้อลดลงไปด้วย`);
+  }
+  if (has(d.tdee)){
+    const losing = (has(d.fatControl) && d.fatControl < 0) || (pbfSt && a.pbf > pbfSt.max);
+    if (losing){
+      const lo = Math.max(d.tdee - 500, d.bmr || 0), hi = Math.max(d.tdee - 300, d.bmr || 0);
+      recs.push(`<b>พลังงาน:</b> กินวันละประมาณ <b>${fmt(lo, 0)}–${fmt(hi, 0)} kcal</b> (น้อยกว่าที่ร่างกายต้องการ 300–500 kcal) ${has(d.bmr) ? `และไม่ควรต่ำกว่า BMR (${fmt(d.bmr, 0)} kcal)` : ""}`);
+    } else {
+      recs.push(`<b>พลังงาน:</b> กินประมาณ ${fmt(d.tdee, 0)} kcal/วัน เพื่อรักษาน้ำหนัก`);
+    }
+  }
+  if (has(weightForRec)){
+    recs.push(`<b>โปรตีน:</b> วันละประมาณ <b>${fmt(weightForRec * 1.2, 0)}–${fmt(weightForRec * 1.6, 0)} กรัม</b> (1.2–1.6 ก./กก.) แบ่งกินทุกมื้อ เช่น อกไก่ ไข่ ปลา เต้าหู้ นม (ผู้ที่เป็นโรคไตควรปรึกษาแพทย์ก่อน)`);
+  }
+  if (pbfSt && pbfSt.cls !== "good" && a.pbf > pbfSt.max || (vflSt && vflSt.cls !== "good")){
+    recs.push(`<b>ออกกำลังกาย:</b> คาร์ดิโอระดับปานกลาง (เดินเร็ว ปั่นจักรยาน ว่ายน้ำ) รวม 150–300 นาที/สัปดาห์ ร่วมกับฝึกเวท 2–3 ครั้ง/สัปดาห์`);
+    recs.push(`<b>อาหาร:</b> ลดน้ำหวาน ขนม ของทอด และแอลกอฮอล์ เพิ่มผักให้ได้ครึ่งจาน เลือกข้าวกล้อง/ธัญพืชไม่ขัดสี`);
+  }
+  if (has(d.smm) && has(d.weight) && d.smm / d.weight < (a.sex === "female" ? 0.36 : 0.40)){
+    recs.push(`<b>กล้ามเนื้อ:</b> สัดส่วนกล้ามเนื้อลายต่อน้ำหนัก (${fmt(d.smm / d.weight * 100)}%) ยังน้อย เน้นท่าฝึกกล้ามเนื้อใหญ่ เช่น สควอท เดดลิฟต์ วิดพื้น ดึงข้อ/ดึงบาร์`);
+  }
+  if (bodyType && bodyType.cls === "good" && !recs.length) recs.push("รักษาพฤติกรรมการกินและการออกกำลังกายแบบเดิมไว้");
+  recs.push(`<b>นอนหลับ</b> 7–9 ชั่วโมงและดื่มน้ำวันละ ${has(d.weight) ? fmt(d.weight * 0.033, 1) + " ลิตร (ประมาณ 33 มล./กก.)" : "อย่างน้อย 2 ลิตร"}`);
+  recs.push(`<b>วัดซ้ำทุก 4–8 สัปดาห์</b> ในสภาพเดียวกัน (ตอนเช้า ท้องว่าง หลังเข้าห้องน้ำ ยังไม่ออกกำลังกาย) เพื่อเทียบผลได้แม่นยำ`);
+  out.push(`<section class="card"><h2>คำแนะนำ</h2><ul class="recs">${recs.map(r => `<li>${r}</li>`).join("")}</ul>
+    <div class="btns"><button type="button" onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button></div></section>`);
+
+  const el = document.getElementById("results");
+  el.innerHTML = out.join("");
+  el.style.display = "block";
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function tile(k, v, st){
+  const cls = st ? st.cls : "info";
+  return `<div class="tile bg-${cls}"><div class="k">${k}</div><div class="v">${v}</div>${st ? `<div class="s ${cls}">${st.text}</div>` : ""}</div>`;
+}
+
+function signed(v, dp = 1){ return (v > 0 ? "+" : "") + fmt(v, dp); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+function parseHistory(txt){
+  if (!txt) return [];
+  return txt.split(/\n/).map(line => line.split(/[,\t]/).map(s => s.trim())).filter(p => p.length >= 4 && p[1] !== "")
+    .map(p => ({ date: p[0], w: +p[1], s: +p[2], p: +p[3] })).filter(r => !Number.isNaN(r.w) && !Number.isNaN(r.s) && !Number.isNaN(r.p));
+}
+
+function chart(rows, key, title, color){
+  const W = 300, H = 150, pl = 34, pr = 14, pt = 26, pb = 28;
+  const vals = rows.map(r => r[key]);
+  let mn = Math.min(...vals), mx = Math.max(...vals);
+  if (mx - mn < 1){ mn -= 0.5; mx += 0.5; }
+  const pad = (mx - mn) * 0.2; mn -= pad; mx += pad;
+  const x = i => pl + (rows.length === 1 ? 0 : i * (W - pl - pr) / (rows.length - 1));
+  const y = v => pt + (1 - (v - mn) / (mx - mn)) * (H - pt - pb);
+  const pts = rows.map((r, i) => `${x(i)},${y(r[key])}`).join(" ");
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${title}" style="margin-right:8px">
+    <text x="0" y="14" font-size="13" font-weight="600" style="fill:var(--text)">${title}</text>
+    <line x1="${pl}" x2="${W - pr}" y1="${H - pb}" y2="${H - pb}" stroke="var(--line)"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5"/>
+    ${rows.map((r, i) => `<circle cx="${x(i)}" cy="${y(r[key])}" r="4" fill="${color}"><title>${esc(r.date)}: ${r[key]}</title></circle>
+      <text x="${x(i)}" y="${y(r[key]) - 8}" font-size="11" text-anchor="middle">${r[key]}</text>
+      <text x="${x(i)}" y="${H - 10}" font-size="9" text-anchor="middle">${esc(r.date.replace(/^(\d+)[-.\/](\d+)[-.\/](\d{2})?(\d{2})$/, "$2/$4"))}</text>`).join("")}
+  </svg>`;
+}
+
+// ---------- init ----------
+buildForm();
+const saved = load();
+fillForm(saved || {});
+document.getElementById("sampleBtn").onclick = () => { fillForm(SAMPLE); run(); };
+document.getElementById("clearBtn").onclick = () => { fillForm({}); save({}); document.getElementById("results").style.display = "none"; };
+document.getElementById("runBtn").onclick = run;
+function run(){ const d = readForm(); save(d); render(d); }
+if (saved && has(saved.weight)) render(saved);
+
+document.getElementById("themeBtn").onclick = () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+};
+</script>
+</body>
+</html>
