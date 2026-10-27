@@ -103,7 +103,16 @@ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
   </header>
 
   <section class="card" id="formCard">
-    <h2>1. กรอกข้อมูลจากใบผล</h2>
+    <h2>1. สแกน QR บนใบผล (ACCUNIQ)</h2>
+    <p class="hint">ถ่ายรูปใบผลให้เห็น QR มุมขวาล่างชัด ๆ หรือสแกน QR ด้วยกล้องมือถือแล้วคัดลอกลิงก์ <code>QR.ACCUNIQ.COM/...</code> มาวาง ระบบจะกรอกตัวเลขให้อัตโนมัติ</p>
+    <div class="grid" style="grid-template-columns:1fr">
+      <div><label for="qrFile">เลือกรูป / ถ่ายรูปใบผล</label><input id="qrFile" type="file" accept="image/*"></div>
+      <div><label for="qrText">หรือวางลิงก์ / ข้อความจาก QR</label><textarea id="qrText" style="min-height:70px" placeholder="https://QR.ACCUNIQ.COM/accuniq?bcadata=MgTH02..."></textarea></div>
+    </div>
+    <div class="btns"><button type="button" id="qrBtn">อ่านข้อมูลจาก QR</button></div>
+    <p id="qrStatus" class="mmsg" role="status"></p>
+
+    <h2 style="margin-top:22px">2. ตรวจสอบ / กรอกข้อมูลเพิ่ม</h2>
     <p class="hint">ช่องที่ไม่มีในใบผลของคุณเว้นว่างได้ ช่อง “ช่วงปกติ” ให้กรอกตามตัวเลขในวงเล็บบนใบผล (ถ้าไม่กรอก ระบบจะประเมินจากเกณฑ์ทั่วไป)</p>
     <div class="btns">
       <button class="ghost" id="sampleBtn" type="button">ใส่ข้อมูลตัวอย่าง</button>
@@ -120,6 +129,7 @@ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
   <p class="disclaimer">ข้อมูลในเว็บนี้เป็นการอธิบายผลเพื่อความเข้าใจทั่วไปเท่านั้น ไม่ใช่การวินิจฉัยทางการแพทย์ หากมีโรคประจำตัว ตั้งครรภ์ หรือมีข้อสงสัย ควรปรึกษาแพทย์ นักกำหนดอาหาร หรือผู้เชี่ยวชาญ ข้อมูลที่กรอกจะถูกเก็บไว้ในเบราว์เซอร์ของคุณเท่านั้น ไม่ถูกส่งไปที่ใด</p>
 </div>
 
+<script src="js/accuniq.js"></script>
 <script>
 // ---------- schema ของฟอร์ม ----------
 const SECTIONS = [
@@ -184,7 +194,7 @@ const SAMPLE = {
   fat:17.0, fatMin:9.1, fatMax:13.7,
   slm:50.2, slmMin:45.0, slmMax:55.0,
   ffm:53.9, ffmMin:48.3, ffmMax:59.1,
-  smm:30.1,
+  smm:30.1, smmMin:27.0, smmMax:33.0,
   bmi:24.0, pbf:23.9, whr:0.82, vfl:7, vfa:68, waist:88.5, edema:0.371,
   bmr:1535, tdee:2363, bodyAge:29, score:73, bcm:35.5, obesity:8.9,
   targetWeight:65.4, muscleControl:0, fatControl:-5.5,
@@ -554,6 +564,110 @@ document.getElementById("clearBtn").onclick = () => { fillForm({}); save({}); do
 document.getElementById("runBtn").onclick = run;
 function run(){ const d = readForm(); save(d); render(d); }
 if (saved && has(saved.weight)) render(saved);
+
+// ---------- QR ----------
+const ZXING_URL = "https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.4/dist/iife/reader/index.js";
+let zxingReady = null;
+function loadZXing(){
+  if (!zxingReady) zxingReady = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = ZXING_URL;
+    s.onload = () => {
+      ZXingWASM.prepareZXingModule({ overrides: { locateFile: (path, prefix) =>
+        path.endsWith(".wasm") ? "https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.4/dist/reader/" + path : prefix + path } });
+      resolve(ZXingWASM);
+    };
+    s.onerror = () => { zxingReady = null; reject(new Error("โหลดตัวอ่าน QR ไม่สำเร็จ")); };
+    document.head.appendChild(s);
+  });
+  return zxingReady;
+}
+
+// QR บนใบผลมีขนาดเล็กและถี่ จึงลองทั้งภาพ แล้วค่อยตัดเป็นส่วน ๆ และขยาย (เริ่มจากมุมขวาล่างที่ QR มักอยู่)
+function* imageRegions(img){
+  const W = img.width, H = img.height;
+  yield [0, 0, W, H];
+  for (const frac of [0.25, 0.4, 0.18]){
+    const size = Math.min(W, H) * frac, step = size / 3;
+    const xs = [], ys = [];
+    for (let x = W - size; x > -step; x -= step) xs.push(Math.max(0, x));
+    for (let y = H - size; y > -step; y -= step) ys.push(Math.max(0, y));
+    for (const y of ys) for (const x of xs) yield [x, y, size, size];
+  }
+}
+
+function regionData(img, [x, y, w, h], target){
+  const scale = target / Math.max(w, h);
+  const c = document.createElement("canvas");
+  c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, x, y, w, h, 0, 0, c.width, c.height);
+  return c;
+}
+
+async function decodeQRImage(file, onProgress){
+  const img = await createImageBitmap(file);
+  let detector = null;
+  if ("BarcodeDetector" in window){
+    try { detector = new BarcodeDetector({ formats: ["qr_code"] }); } catch(e){}
+  }
+  let zx = null;
+  try { zx = await loadZXing(); } catch(e){ if (!detector) throw e; }
+  const regions = [...imageRegions(img)];
+  for (let i = 0; i < regions.length; i++){
+    onProgress && onProgress(i + 1, regions.length);
+    for (const target of i === 0 ? [Math.min(2000, Math.max(img.width, img.height))] : [800, 1200]){
+      const c = regionData(img, regions[i], target);
+      if (detector){
+        try { const r = await detector.detect(c); if (r.length) return r[0].rawValue; } catch(e){}
+      }
+      if (zx){
+        const data = c.getContext("2d").getImageData(0, 0, c.width, c.height);
+        const r = await zx.readBarcodes(data, { formats: ["QRCode"], tryHarder: true, maxNumberOfSymbols: 1 });
+        if (r.length && r[0].text) return r[0].text;
+      }
+    }
+  }
+  throw new Error("หา QR ในรูปไม่เจอ ลองถ่ายใหม่ให้ QR ชัดและใหญ่ขึ้น");
+}
+
+function applyQR(text){
+  const d = parseAccuniq(text);
+  if (d.time && d.date) d.date += " " + d.time;
+  const keepHistory = document.getElementById("history").value;
+  fillForm(d);
+  document.getElementById("history").value = keepHistory;
+  run();
+  return d;
+}
+
+const qrStatus = document.getElementById("qrStatus");
+document.getElementById("qrBtn").onclick = async () => {
+  const text = document.getElementById("qrText").value.trim();
+  const file = document.getElementById("qrFile").files[0];
+  qrStatus.className = "mmsg";
+  try {
+    let raw = text;
+    if (!raw){
+      if (!file) throw new Error("กรุณาเลือกรูป หรือวางลิงก์จาก QR ก่อน");
+      qrStatus.textContent = "กำลังอ่าน QR…";
+      raw = await decodeQRImage(file, (i, n) => { qrStatus.textContent = `กำลังค้นหา QR ในรูป… (${i}/${n})`; });
+      document.getElementById("qrText").value = raw;
+    }
+    const d = applyQR(raw);
+    qrStatus.className = "mmsg good";
+    qrStatus.textContent = `อ่านข้อมูลสำเร็จ (วันที่ ${d.date || "-"}) · ข้อมูลกล้ามเนื้อ/ไขมันแยกส่วนและประวัติไม่มีใน QR กรอกเพิ่มเองได้`;
+  } catch(e){
+    qrStatus.className = "mmsg bad";
+    qrStatus.textContent = e.message;
+  }
+};
+
+// เปิดเว็บพร้อม ?bcadata=... ได้โดยตรง
+if (/bcadata=/i.test(location.search)){
+  try { applyQR(location.search); } catch(e){ qrStatus.className = "mmsg bad"; qrStatus.textContent = e.message; }
+}
 
 document.getElementById("themeBtn").onclick = () => {
   const root = document.documentElement;
