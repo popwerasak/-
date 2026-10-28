@@ -136,6 +136,20 @@ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 .irow small{font-size:.78rem;line-height:1.3}
 .meal{font-size:1.3rem;margin-right:4px}
 .print-only{display:none}
+.exgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.excard{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg)}
+.exhead{display:flex;flex-direction:column}
+.poses{display:flex;align-items:center;gap:4px;margin:6px 0}
+.pf{flex:1;display:flex;flex-direction:column;align-items:center;background:var(--card);border-radius:10px;padding:4px}
+.pf svg{width:100%;max-width:170px;height:auto}
+.pf small{font-size:.78rem;color:var(--muted)}
+.parrow{color:var(--gc,var(--accent));font-size:1.3rem}
+.exdose{display:flex;flex-wrap:wrap;gap:4px 12px;padding:6px 10px;border-radius:8px;background:color-mix(in srgb,var(--gc,var(--accent)) 14%,transparent);font-size:.95rem}
+.lvbtns{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+.lvbtns button{line-height:1.25;padding:8px 4px}
+.lvbtns small{font-weight:400;font-size:.75rem}
+.exlevels[data-level="1"] [data-lv="1"],.exlevels[data-level="2"] [data-lv="2"],.exlevels[data-level="3"] [data-lv="3"]{background:var(--gc,var(--accent));color:#fff}
+.exlevels[data-level="1"] .lv:not(.lv1),.exlevels[data-level="2"] .lv:not(.lv2),.exlevels[data-level="3"] .lv:not(.lv3){display:none}
 .cam{position:relative;margin-top:12px;border-radius:12px;overflow:hidden;background:#000}
 .cam video{display:block;width:100%;max-height:70vh;object-fit:cover}
 .cam-frame{position:absolute;left:50%;top:42%;width:min(60%,50vh);aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.35)}
@@ -203,6 +217,7 @@ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 </dialog>
 
 <script src="js/accuniq.js"></script>
+<script src="js/exercises.js"></script>
 <script src="js/guide.js"></script>
 <script>
 // ---------- schema ของฟอร์ม ----------
