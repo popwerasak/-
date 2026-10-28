@@ -85,6 +85,12 @@ table{border-collapse:collapse;width:100%;font-size:.95rem}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 #results{display:none}
+details.guide{padding:0;margin-top:8px}
+details.guide>summary{padding:12px 14px;font-size:1.02rem}
+details.guide[open]>summary{border-bottom:1px solid var(--line)}
+.guide-body{padding:4px 14px 12px}
+.guide-body table{margin:6px 0 10px}
+.refs a{color:var(--accent);word-break:break-word}
 .cam{position:relative;margin-top:12px;border-radius:12px;overflow:hidden;background:#000}
 .cam video{display:block;width:100%;max-height:70vh;object-fit:cover}
 .cam-frame{position:absolute;left:50%;top:42%;width:min(60%,50vh);aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.35)}
@@ -145,6 +151,7 @@ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 </div>
 
 <script src="js/accuniq.js"></script>
+<script src="js/guide.js"></script>
 <script>
 // ---------- schema ของฟอร์ม ----------
 const SECTIONS = [
@@ -516,7 +523,7 @@ function render(d){
     }
   }
   if (has(weightForRec)){
-    recs.push(`<b>โปรตีน:</b> วันละประมาณ <b>${fmt(weightForRec * 1.2, 0)}–${fmt(weightForRec * 1.6, 0)} กรัม</b> (1.2–1.6 ก./กก.) แบ่งกินทุกมื้อ เช่น อกไก่ ไข่ ปลา เต้าหู้ นม (ผู้ที่เป็นโรคไตควรปรึกษาแพทย์ก่อน)`);
+    recs.push(`<b>โปรตีน:</b> อย่างน้อยวันละ <b>${fmt(weightForRec, 0)} กรัม</b> (1 ก./กก. ตาม Thai DRI) ช่วงลดไขมันร่วมกับฝึกเวทเพิ่มเป็น ${fmt(weightForRec * 1.2, 0)}–${fmt(weightForRec * 1.6, 0)} กรัม แบ่งกินทุกมื้อ (ผู้ที่เป็นโรคไตควรปรึกษาแพทย์ก่อน)`);
   }
   if (pbfSt && pbfSt.cls !== "good" && a.pbf > pbfSt.max || (vflSt && vflSt.cls !== "good")){
     recs.push(`<b>ออกกำลังกาย:</b> คาร์ดิโอระดับปานกลาง (เดินเร็ว ปั่นจักรยาน ว่ายน้ำ) รวม 150–300 นาที/สัปดาห์ ร่วมกับฝึกเวท 2–3 ครั้ง/สัปดาห์`);
@@ -528,8 +535,9 @@ function render(d){
   if (bodyType && bodyType.cls === "good" && !recs.length) recs.push("รักษาพฤติกรรมการกินและการออกกำลังกายแบบเดิมไว้");
   recs.push(`<b>นอนหลับ</b> 7–9 ชั่วโมงและดื่มน้ำวันละ ${has(d.weight) ? fmt(d.weight * 0.033, 1) + " ลิตร (ประมาณ 33 มล./กก.)" : "อย่างน้อย 2 ลิตร"}`);
   recs.push(`<b>วัดซ้ำทุก 4–8 สัปดาห์</b> ในสภาพเดียวกัน (ตอนเช้า ท้องว่าง หลังเข้าห้องน้ำ ยังไม่ออกกำลังกาย) เพื่อเทียบผลได้แม่นยำ`);
-  out.push(`<section class="card"><h2>คำแนะนำ</h2><ul class="recs">${recs.map(r => `<li>${r}</li>`).join("")}</ul>
-    <div class="btns"><button type="button" onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button></div></section>`);
+  out.push(`<section class="card"><h2>คำแนะนำโดยสรุป</h2><ul class="recs">${recs.map(r => `<li>${r}</li>`).join("")}</ul></section>`);
+  out.push(healthGuide(d, a));
+  out.push(`<div class="btns"><button type="button" onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button></div>`);
 
   const el = document.getElementById("results");
   el.innerHTML = out.join("");
@@ -776,6 +784,8 @@ document.getElementById("qrBtn").onclick = async () => {
 if (/bcadata=/i.test(location.search)){
   try { applyQR(location.search); } catch(e){ qrStatus.className = "mmsg bad"; qrStatus.textContent = e.message; }
 }
+
+window.addEventListener("beforeprint", () => document.querySelectorAll("#results details").forEach(el => el.open = true));
 
 document.getElementById("themeBtn").onclick = () => {
   const root = document.documentElement;
