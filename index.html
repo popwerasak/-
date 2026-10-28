@@ -85,18 +85,64 @@ table{border-collapse:collapse;width:100%;font-size:.95rem}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 #results{display:none}
-details.guide{padding:0;margin-top:8px}
-details.guide>summary{padding:12px 14px;font-size:1.02rem}
-details.guide[open]>summary{border-bottom:1px solid var(--line)}
-.guide-body{padding:4px 14px 12px}
-.guide-body table{margin:6px 0 10px}
 .refs a{color:var(--accent);word-break:break-word}
+.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-top:10px}
+.gcard{position:relative;display:flex;align-items:center;gap:12px;text-align:left;width:100%;padding:14px;border-radius:14px;
+  background:var(--card);color:var(--text);border:1px solid var(--line);border-left:6px solid var(--gc);font-weight:400;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.gcard:hover,.gcard:focus-visible{border-color:var(--gc);transform:translateY(-1px)}
+.gicon{flex:none;display:inline-grid;place-items:center;width:54px;height:54px;border-radius:50%;font-size:1.8rem;
+  background:color-mix(in srgb,var(--gc) 18%,transparent);margin-right:2px}
+.gtext{display:flex;flex-direction:column;min-width:0;flex:1}
+.gtitle{font-weight:700;font-size:1.02rem;line-height:1.35}
+.gsub{font-size:.85rem;color:var(--muted)}
+.gbadge{position:absolute;top:-8px;right:10px;font-size:.72rem;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--bad);color:#fff}
+.garrow{font-size:1.6rem;color:var(--gc);flex:none}
+.dlg{border:0;padding:0;border-radius:16px;width:min(720px,calc(100vw - 16px));max-height:calc(100dvh - 24px);background:var(--card);color:var(--text);display:none;flex-direction:column}
+.dlg[open]{display:flex}
+.dlg::backdrop{background:rgba(0,0,0,.5)}
+.dlg-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 16px;border-top:6px solid var(--gc);border-bottom:1px solid var(--line)}
+.dlg-title{margin:0;display:flex;align-items:center;gap:10px;font-size:1.15rem}
+.dlg-title .gicon{width:44px;height:44px;font-size:1.5rem}
+.dlg-body{overflow-y:auto;padding:8px 16px 12px}
+.dlg-foot{padding:10px 16px;border-top:1px solid var(--line);text-align:right}
+.dlg-body table{margin:6px 0 10px}
+.gfig{margin:12px 0;padding:12px;border-radius:12px;background:var(--bg);border:1px solid var(--line)}
+.gfig svg{display:block;width:100%;max-width:420px;margin:0 auto;height:auto}
+.gfig figcaption{font-size:.88rem;color:var(--muted);text-align:center;margin-top:6px}
+.hbar{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(60px,1fr) auto;gap:8px;align-items:center;font-size:.88rem;margin:5px 0}
+.hbar>div{height:12px;background:var(--track);border-radius:6px;overflow:hidden}
+.hbar i{display:block;height:100%;background:var(--gc,var(--accent));border-radius:6px}
+.hbar b{white-space:nowrap;font-size:.85rem}
+.spoons{display:flex;align-items:center;gap:10px;margin:8px 0}
+.spoons .sl{width:62px;flex:none;line-height:1.2}
+.spoons .si{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+.spoons .si span{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;font-size:1rem;opacity:.9}
+.spoons .sn{font-size:1.6rem;width:28px;text-align:right}
+.goal{display:flex;height:34px;border-radius:8px;overflow:hidden;background:var(--track);outline:2px dashed var(--muted);outline-offset:2px}
+.goal i{display:block;height:100%;color:#fff;font-style:normal;font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:8px 4px;text-align:center}
+.goal-axis{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);margin-top:4px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.week div{display:flex;flex-direction:column;align-items:center;padding:6px 2px;border-radius:10px;background:color-mix(in srgb,var(--dc) 18%,transparent);border-top:4px solid var(--dc)}
+.week span{font-size:1.4rem}
+.week small{font-size:.7rem;text-align:center;line-height:1.2}
+.talk{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.talk div{display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 4px;border-radius:10px;border:1px solid var(--line)}
+.talk div.on{border:2px solid var(--good);background:var(--good-soft)}
+.talk span{font-size:1.8rem}
+.talk small{font-size:.75rem;color:var(--muted);line-height:1.3}
+.irow{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px}
+.irow div{display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 4px;border-radius:10px;background:color-mix(in srgb,var(--gc) 12%,transparent)}
+.irow span{font-size:1.6rem}
+.irow small{font-size:.78rem;line-height:1.3}
+.meal{font-size:1.3rem;margin-right:4px}
+.print-only{display:none}
 .cam{position:relative;margin-top:12px;border-radius:12px;overflow:hidden;background:#000}
 .cam video{display:block;width:100%;max-height:70vh;object-fit:cover}
 .cam-frame{position:absolute;left:50%;top:42%;width:min(60%,50vh);aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.35)}
 .cam-bar{position:absolute;left:0;right:0;bottom:0;display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;padding:10px;background:rgba(0,0,0,.6);color:#fff;font-size:.9rem}
 @media print{
-  #formCard,.btns,.topbar button{display:none!important}
+  #formCard,.btns,.topbar button,.ggrid,.dlg{display:none!important}
+  .print-only{display:block}
   body{background:#fff}
   .card{break-inside:avoid}
 }
@@ -149,6 +195,12 @@ details.guide[open]>summary{border-bottom:1px solid var(--line)}
 
   <p class="disclaimer">ข้อมูลในเว็บนี้เป็นการอธิบายผลเพื่อความเข้าใจทั่วไปเท่านั้น ไม่ใช่การวินิจฉัยทางการแพทย์ หากมีโรคประจำตัว ตั้งครรภ์ หรือมีข้อสงสัย ควรปรึกษาแพทย์ นักกำหนดอาหาร หรือผู้เชี่ยวชาญ ข้อมูลที่กรอกจะถูกเก็บไว้ในเบราว์เซอร์ของคุณเท่านั้น ไม่ถูกส่งไปที่ใด</p>
 </div>
+
+<dialog id="guideDlg" class="dlg" aria-labelledby="guideDlgTitle">
+  <div class="dlg-head"><h2 class="dlg-title" id="guideDlgTitle"></h2><button type="button" class="ghost dlg-close" aria-label="ปิด">✕</button></div>
+  <div class="dlg-body"></div>
+  <div class="dlg-foot"><button type="button" class="dlg-close">ปิด</button></div>
+</dialog>
 
 <script src="js/accuniq.js"></script>
 <script src="js/guide.js"></script>

@@ -40,11 +40,110 @@ function guideTable(rows, h1, h2){
   return `<table><thead><tr><th>${h1}</th><th>${h2}</th></tr></thead><tbody>${rows.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join("")}</tbody></table>`;
 }
 
-function guideSection(title, body, open){
-  return `<details class="guide" ${open ? "open" : ""}><summary>${title}</summary><div class="guide-body">${body}</div></details>`;
+// หัวข้อคู่มือแสดงเป็นปุ่มการ์ด กดแล้วเปิดรายละเอียดในหน้าต่าง (dialog)
+const GUIDE_META = {
+  "⚖️": { c: "#6366f1", sub: "เป้าหมายน้ำหนัก BMI และรอบเอว" },
+  "🥗": { c: "#16a34a", sub: "จาน 2:1:1 · หวาน มัน เค็ม 6:6:1" },
+  "🍳": { c: "#ea580c", sub: "ควรกินวันละกี่กรัม กินอะไรดี" },
+  "🦴": { c: "#0891b2", sub: "แคลเซียม วิตามินดี อาหารบำรุงกระดูก" },
+  "🏃": { c: "#dc2626", sub: "เพิ่มกล้ามเนื้อ ลดไขมัน ตาราง 7 วัน" },
+  "🍱": { c: "#ca8a04", sub: "ตัวอย่างอาหาร เช้า กลางวัน เย็น" },
+  "💡": { c: "#7c3aed", sub: "นอน ดื่มน้ำ ความเครียด เมื่อไรควรพบแพทย์" },
+};
+let guideCards = [];
+const guideBodies = {};
+
+function guideSection(title, body, important){
+  const icon = [...title][0] === "⚖" ? "⚖️" : Object.keys(GUIDE_META).find(k => title.startsWith(k)) || "💡";
+  const meta = GUIDE_META[icon] || GUIDE_META["💡"];
+  const id = "g" + guideCards.length;
+  const name = title.replace(icon, "").trim();
+  guideBodies[id] = { icon, name, color: meta.c, body };
+  guideCards.push(`<button type="button" class="gcard" data-guide="${id}" style="--gc:${meta.c}">
+    <span class="gicon" aria-hidden="true">${icon}</span>
+    <span class="gtext"><span class="gtitle">${name}</span><span class="gsub">${meta.sub}</span></span>
+    ${important ? `<span class="gbadge">สำคัญสำหรับคุณ</span>` : ""}<span class="garrow" aria-hidden="true">›</span></button>`);
+  return "";
+}
+
+// ---------- ภาพประกอบ ----------
+function bmiGauge(bmi){
+  if (!has(bmi)) return "";
+  const lo = 15, hi = 35, X = v => 10 + (Math.min(Math.max(v, lo), hi) - lo) / (hi - lo) * 300;
+  const zones = [[lo, 18.5, "#60a5fa", "ผอม"], [18.5, 23, "#22c55e", "ปกติ"], [23, 25, "#facc15", "เกิน"], [25, 30, "#fb923c", "อ้วน 1"], [30, hi, "#ef4444", "อ้วน 2"]];
+  return `<figure class="gfig"><svg viewBox="0 0 320 92" role="img" aria-label="มาตรวัด BMI ${fmt(bmi)}">
+    ${zones.map(([a, b, c, t]) => `<rect x="${X(a)}" y="38" width="${X(b) - X(a)}" height="18" fill="${c}"/><text x="${(X(a) + X(b)) / 2}" y="74" font-size="11" text-anchor="middle">${t}</text>`).join("")}
+    ${[18.5, 23, 25, 30].map(v => `<text x="${X(v)}" y="88" font-size="9" text-anchor="middle">${v}</text>`).join("")}
+    <polygon points="${X(bmi) - 8},14 ${X(bmi) + 8},14 ${X(bmi)},34" style="fill:var(--text)"/>
+    <text x="${X(bmi)}" y="10" font-size="12" font-weight="700" text-anchor="middle" style="fill:var(--text)">BMI ของคุณ ${fmt(bmi)}</text>
+  </svg><figcaption>เกณฑ์ BMI สำหรับคนเอเชีย ช่วงสีเขียวคือเป้าหมาย</figcaption></figure>`;
+}
+
+function waistFig(waist, h){
+  if (!has(waist) || !h) return "";
+  const lim = h * 50, max = Math.max(waist, lim) * 1.1, W = v => v / max * 100;
+  const over = waist > lim;
+  return `<figure class="gfig"><div class="hbar"><span>รอบเอวของคุณ</span><div><i style="width:${W(waist)}%;background:${over ? "var(--bad)" : "var(--good)"}"></i></div><b>${fmt(waist)} ซม.</b></div>
+    <div class="hbar"><span>ส่วนสูง ÷ 2</span><div><i style="width:${W(lim)}%;background:var(--accent)"></i></div><b>${fmt(lim)} ซม.</b></div>
+    <figcaption>📏 รอบเอวไม่ควรเกินส่วนสูงหาร 2 ${over ? `(ตอนนี้เกิน ${fmt(waist - lim)} ซม.)` : "(อยู่ในเกณฑ์)"}</figcaption></figure>`;
+}
+
+function plateFig(){
+  // จาน 2:1:1 : ผักครึ่งจาน (ซ้าย) ข้าว ¼ (ขวาบน) โปรตีน ¼ (ขวาล่าง)
+  return `<figure class="gfig"><svg viewBox="0 0 320 210" role="img" aria-label="จานอาหารสูตร 2:1:1">
+    <circle cx="120" cy="105" r="98" fill="#e5e7eb"/><circle cx="120" cy="105" r="86" fill="#fff" stroke="#d1d5db"/>
+    <path d="M120 105 L120 19 A86 86 0 0 0 120 191 Z" fill="#4ade80"/>
+    <path d="M120 105 L120 19 A86 86 0 0 1 206 105 Z" fill="#fde68a"/>
+    <path d="M120 105 L206 105 A86 86 0 0 1 120 191 Z" fill="#fca5a5"/>
+    <text x="72" y="100" font-size="30" text-anchor="middle">🥦🥬</text><text x="72" y="128" font-size="13" font-weight="700" text-anchor="middle" fill="#14532d">ผัก 2 ส่วน</text>
+    <text x="158" y="68" font-size="24" text-anchor="middle">🍚</text><text x="158" y="88" font-size="11" font-weight="700" text-anchor="middle" fill="#713f12">ข้าว/แป้ง 1</text>
+    <text x="158" y="140" font-size="24" text-anchor="middle">🐟</text><text x="158" y="160" font-size="11" font-weight="700" text-anchor="middle" fill="#7f1d1d">โปรตีน 1</text>
+    <circle cx="270" cy="70" r="34" fill="#fed7aa"/><text x="270" y="78" font-size="26" text-anchor="middle">🍊</text><text x="270" y="122" font-size="11" text-anchor="middle">+ ผลไม้</text>
+    <circle cx="270" cy="160" r="22" fill="#dbeafe"/><text x="270" y="167" font-size="20" text-anchor="middle">💧</text><text x="270" y="198" font-size="11" text-anchor="middle">น้ำเปล่า</text>
+  </svg><figcaption>จาน 9 นิ้ว แบ่ง 4 ส่วน: ผักครึ่งจาน ข้าว ¼ โปรตีน ¼</figcaption></figure>`;
+}
+
+function spoonsFig(){
+  const row = (label, n, emoji, color, note) => `<div class="spoons"><span class="sl" style="color:${color}"><b>${label}</b><br><small>${note}</small></span><span class="si">${Array.from({ length: n }, () => `<span style="background:${color}">${emoji}</span>`).join("")}</span><b class="sn" style="color:${color}">${n}</b></div>`;
+  return `<figure class="gfig">${row("หวาน", 6, "🍬", "#db2777", "น้ำตาล")}${row("มัน", 6, "🫒", "#ca8a04", "น้ำมัน")}${row("เค็ม", 1, "🧂", "#2563eb", "เกลือ")}
+    <figcaption>ไม่เกินกี่ <b>ช้อนชา</b> ต่อวัน (สูตร 6 : 6 : 1)</figcaption></figure>`;
+}
+
+function foodBars(rows, unit, max){
+  return `<figure class="gfig">${rows.map(([n, v]) => {
+    const num = typeof v === "number" ? v : Number(String(v).replace(/[^\d–-]/g, "").split(/[–-]/).pop());
+    return `<div class="hbar"><span>${n}</span><div><i style="width:${Math.min(num / max * 100, 100)}%"></i></div><b>${v} ${unit}</b></div>`;
+  }).join("")}</figure>`;
+}
+
+function goalFig(items, target, unit, label){
+  const total = items.reduce((s, [, v]) => s + v, 0);
+  const colors = ["#f97316", "#22c55e", "#3b82f6", "#a855f7", "#eab308"];
+  return `<figure class="gfig"><div class="goal">${items.map(([n, v], i) => `<i style="width:${v / Math.max(total, target) * 100}%;background:${colors[i % 5]}" title="${n}">${n}</i>`).join("")}</div>
+    <div class="goal-axis"><span>0</span><span>${label} ${fmt(target, 0)} ${unit}</span></div>
+    <figcaption>${items.map(([n, v]) => `${n} ${v}`).join(" + ")} = <b>${fmt(total, 0)} ${unit}</b></figcaption></figure>`;
+}
+
+function weekFig(){
+  const days = [["จ", "💪", "เวท", "#ef4444"], ["อ", "🚶", "เดินเร็ว", "#22c55e"], ["พ", "💪", "เวท", "#ef4444"], ["พฤ", "🏊", "แอโรบิก", "#22c55e"], ["ศ", "💪", "เวท+เดิน", "#ef4444"], ["ส", "🏸", "กลางแจ้ง", "#22c55e"], ["อา", "🧘", "พัก", "#94a3b8"]];
+  return `<figure class="gfig"><div class="week">${days.map(([d, e, t, c]) => `<div style="--dc:${c}"><b>${d}</b><span>${e}</span><small>${t}</small></div>`).join("")}</div>
+    <figcaption><span style="color:#ef4444">■</span> ฝึกกล้ามเนื้อ ≥ 2 วัน · <span style="color:#22c55e">■</span> แอโรบิกรวม 150–300 นาที · <span style="color:#94a3b8">■</span> พัก</figcaption></figure>`;
+}
+
+function talkFig(){
+  return `<figure class="gfig"><div class="talk">
+    <div><span>😌</span><b>เบา</b><small>ร้องเพลงได้</small></div>
+    <div class="on"><span>🙂</span><b>ปานกลาง ✓</b><small>พูดเป็นประโยคได้ แต่ร้องเพลงไม่ได้</small></div>
+    <div><span>😮‍💨</span><b>หนัก</b><small>พูดได้แค่ 2–3 คำ</small></div>
+  </div><figcaption>ทดสอบความหนักด้วยการพูด (Talk test)</figcaption></figure>`;
+}
+
+function iconRow(items){
+  return `<figure class="gfig"><div class="irow">${items.map(([e, t]) => `<div><span>${e}</span><small>${t}</small></div>`).join("")}</div></figure>`;
 }
 
 function healthGuide(d, a){
+  guideCards = [];
   const female = a.sex === "female";
   const age = has(d.age) ? d.age : 30;
   const overweight = has(a.bmi) && a.bmi >= 23;
@@ -83,6 +182,8 @@ function healthGuide(d, a){
   // 1. ลด BMI / น้ำหนัก
   const wAt229 = a.h ? 22.9 * a.h * a.h : null;
   parts.push(guideSection("⚖️ BMI เกิน ทำอย่างไรให้ลดลง", `
+    ${bmiGauge(a.bmi)}${waistFig(d.waist, a.h)}
+    ${iconRow([["🍽️", "อาหาร"], ["🏃", "ออกกำลังกาย"], ["😊", "อารมณ์"], ["🚭", "ไม่สูบบุหรี่"], ["🚫🍺", "ไม่ดื่มสุรา"]])}
     <ul class="recs">
       <li><b>เป้าหมาย BMI สำหรับคนไทย 18.5–22.9</b>${wAt229 && has(d.weight) && d.weight > wAt229 ? ` – สำหรับส่วนสูง ${d.height} ซม. น้ำหนักไม่ควรเกิน <b>${fmt(wAt229)} กก.</b> (ต้องลดอีกประมาณ ${fmt(d.weight - wAt229)} กก.)` : ""}</li>
       <li><b>ลดช้า ๆ สัปดาห์ละ 0.5–1 กก.</b> ด้วยการกินให้น้อยกว่าที่ร่างกายใช้ประมาณ <b>500 kcal/วัน</b>${tdee ? ` → สำหรับคุณคือกินวันละประมาณ <b>${fmt(kcalTarget, 0)} kcal</b>` : ""} ลดเร็วกว่านี้มักเสียกล้ามเนื้อและกลับมาอ้วนง่าย (โยโย่)</li>
@@ -94,9 +195,9 @@ function healthGuide(d, a){
 
   // 2. อาหารลดน้ำหนัก
   parts.push(guideSection("🥗 การกินอาหารเพื่อลดน้ำหนัก", `
-    <h3>สูตรจานอาหาร 2 : 1 : 1 (กรมอนามัย)</h3>
+    <h3>สูตรจานอาหาร 2 : 1 : 1 (กรมอนามัย)</h3>${plateFig()}
     <p class="mmsg">แบ่งจานขนาด 9 นิ้วเป็น 4 ส่วน: <b>ผัก 2 ส่วน</b> (ครึ่งจาน) · <b>ข้าว/แป้ง 1 ส่วน</b> (เลือกข้าวกล้อง ข้าวไม่ขัดสี) · <b>เนื้อสัตว์ไขมันต่ำ/โปรตีน 1 ส่วน</b> แล้วเสริมผลไม้รสไม่หวานจัดหลังอาหาร</p>
-    <h3>หวาน มัน เค็ม 6 : 6 : 1 ต่อวัน</h3>
+    <h3>หวาน มัน เค็ม 6 : 6 : 1 ต่อวัน</h3>${spoonsFig()}
     <ul class="recs">
       <li><b>น้ำตาลไม่เกิน 6 ช้อนชา</b> (24 กรัม) – ชานมไข่มุก 1 แก้วมีน้ำตาลได้ถึง 10–15 ช้อนชา สั่ง "หวานน้อย" หรือ "ไม่หวาน" ดื่มน้ำเปล่าแทนน้ำหวาน/น้ำอัดลม</li>
       <li><b>น้ำมันไม่เกิน 6 ช้อนชา</b> – เลือกต้ม นึ่ง ย่าง อบ ยำ แทนทอด ผัดน้ำมันน้อย ลดกะทิ หนังสัตว์ และของทอด</li>
@@ -130,11 +231,12 @@ function healthGuide(d, a){
       <li>ผู้ที่เป็น<b>โรคไต</b> หรือมีโรคประจำตัว ควรปรึกษาแพทย์/นักกำหนดอาหารก่อนเพิ่มโปรตีน</li>
     </ul>
     <h3>ตัวอย่างอาหารและปริมาณโปรตีน (โดยประมาณ)</h3>
-    ${guideTable(PROTEIN_FOODS.map(([n, g]) => [n, `${g} กรัม`]), "อาหาร", "โปรตีน")}
-    ${proteinBase ? `<p class="hint">ตัวอย่างให้ได้ ~${fmt(proteinBase, 0)} กรัม: ไข่ 2 ฟอง (14) + อกไก่ 1 ฝ่ามือ (25) + ปลานึ่ง 1 ชิ้น (20) + นม 1 กล่อง (7)${proteinBase > 66 ? " + เต้าหู้ ½ แผ่น (12)" : ""} ≈ ${proteinBase > 66 ? 78 : 66} กรัม</p>` : ""}`, smmLow));
+    ${foodBars(PROTEIN_FOODS, "ก.", 25)}
+    ${proteinBase ? `<h3>ตัวอย่าง 1 วันให้ถึงเป้า</h3>${goalFig([["🥚 ไข่ 2 ฟอง", 14], ["🍗 อกไก่", 25], ["🐟 ปลา", 20], ["🥛 นม", 7]].concat(proteinBase > 66 ? [["⬜ เต้าหู้", 12]] : []), proteinBase, "กรัม", "เป้าหมาย")}` : ""}`, smmLow));
 
   // 4. กระดูก
   parts.push(guideSection("🦴 กินอย่างไรเพิ่มมวลกระดูก", `
+    ${iconRow([["🥛", "แคลเซียม"], ["☀️", "วิตามินดี"], ["🚶", "ออกกำลังลงน้ำหนัก"], ["🚫☕", "ลดกาแฟ/น้ำอัดลม"], ["🧂↓", "ลดเค็ม"]])}
     <ul class="recs">
       <li><b>แคลเซียม</b>: ผู้ใหญ่อายุ 19–50 ปี ควรได้ <b>800 มก./วัน</b> อายุ 51 ปีขึ้นไป <b>1,000 มก./วัน</b> (Thai DRI 2563) → คุณควรได้ประมาณ <b>${fmt(calcium, 0)} มก./วัน</b></li>
       <li><b>วิตามินดี</b> ช่วยดูดซึมแคลเซียม – รับแดดอ่อนช่วงเช้าหรือเย็น 15–20 นาที กินปลา ไข่แดง นมเสริมวิตามินดี</li>
@@ -144,11 +246,13 @@ function healthGuide(d, a){
       <li>ไม่ควรกินแคลเซียมเสริมเองในปริมาณสูง ควรได้จากอาหารเป็นหลัก หรือปรึกษาแพทย์/เภสัชกร</li>
     </ul>
     <h3>อาหารแคลเซียมสูง (โดยประมาณ)</h3>
-    ${guideTable(CALCIUM_FOODS.map(([n, mg]) => [n, `${mg} มก.`]), "อาหาร", "แคลเซียม")}
-    <p class="hint">ตัวอย่างให้ได้ ~${fmt(calcium, 0)} มก.: นม 2 กล่อง (440) + เต้าหู้ ½ แผ่น (200) + ผักใบเขียว 1 ทัพพี (100)${calcium > 800 ? " + ปลาเล็กปลาน้อย 2 ช้อนโต๊ะ (200)" : " + งาดำ 1 ช้อนโต๊ะ (90)"}</p>`, mineralLow));
+    ${foodBars(CALCIUM_FOODS, "มก.", 250)}
+    <h3>ตัวอย่าง 1 วันให้ถึงเป้า</h3>
+    ${goalFig([["🥛 นม 2 กล่อง", 440], ["⬜ เต้าหู้", 200], ["🥬 ผักใบเขียว", 100]].concat(calcium > 800 ? [["🐟 ปลาเล็กปลาน้อย", 200]] : [["⚫ งาดำ", 90]]), calcium, "มก.", "เป้าหมาย")}`, mineralLow));
 
   // 5. ออกกำลังกาย
   parts.push(guideSection("🏃 ออกกำลังกายอย่างไร เพิ่มกล้ามเนื้อ ลดไขมัน", `
+    ${weekFig()}${talkFig()}
     <ul class="recs">
       <li><b>แอโรบิกระดับปานกลาง 150–300 นาที/สัปดาห์</b> (เช่น วันละ 30–60 นาที 5 วัน) หรือระดับหนัก 75–150 นาที/สัปดาห์ – ระดับปานกลางคือ "พูดเป็นประโยคได้ แต่ร้องเพลงไม่ได้"</li>
       <li><b>ฝึกกล้ามเนื้อ (แรงต้าน) อย่างน้อย 2 วัน/สัปดาห์</b> ให้ครบกล้ามเนื้อมัดใหญ่ ทั้งขา สะโพก หลัง อก ไหล่ แขน ท้อง</li>
@@ -174,11 +278,11 @@ function healthGuide(d, a){
   const lowCal = kcalTarget < 1700;
   parts.push(guideSection(`🍱 ตัวอย่างเมนู 1 วัน (ประมาณ ${fmt(Math.round(kcalTarget / 100) * 100, 0)} kcal)`, `
     <table><tbody>
-      <tr><td><b>เช้า</b></td><td>ข้าวกล้อง ${lowCal ? "1" : "1½"} ทัพพี + ไข่ต้ม 2 ฟอง + ผัดผักรวมน้ำมันน้อย + นมจืดพร่องมันเนย 1 กล่อง<br><span class="hint">หรือ โจ๊กข้าวกล้องใส่ไข่ + ผัก / ขนมปังโฮลวีต 2 แผ่น + ไข่ + นม</span></td></tr>
-      <tr><td><b>ว่างเช้า</b></td><td>ผลไม้ 1 ส่วน (ฝรั่ง ½ ผล / ส้ม 1 ผล / แอปเปิล 1 ผล)</td></tr>
-      <tr><td><b>กลางวัน</b></td><td>ข้าวกล้อง ${lowCal ? "1½" : "2"} ทัพพี + แกงจืดเต้าหู้หมูสับ + ปลานึ่งมะนาว / ยำอกไก่ + ผักสด<br><span class="hint">อาหารจานเดียว: ก๋วยเตี๋ยวน้ำใส ไก่/ปลา เพิ่มผัก ไม่เติมน้ำตาล · ข้าวกะเพราไก่ไข่ต้ม (ไม่ทอดไข่) + ผักแนม</span></td></tr>
-      <tr><td><b>ว่างบ่าย</b></td><td>โยเกิร์ตไขมันต่ำ 1 ถ้วย / นมถั่วเหลืองไม่หวาน / ถั่วอบ 1 กำมือเล็ก</td></tr>
-      <tr><td><b>เย็น</b></td><td>ข้าวกล้อง ${lowCal ? "1" : "1½"} ทัพพี + ต้มยำปลา/กุ้ง (น้ำใส) + ผักลวกน้ำพริก + ไก่ย่าง (ไม่กินหนัง)<br><span class="hint">หรือ สุกี้น้ำ (น้ำจิ้มน้อย) · แกงส้มผักรวมกับปลา · ส้มตำไม่ใส่ปูปลาร้า + ไก่ย่าง + ข้าวเหนียว 1 ทัพพีเล็ก</span></td></tr>
+      <tr><td><span class="meal">🌅</span><b>เช้า</b></td><td>ข้าวกล้อง ${lowCal ? "1" : "1½"} ทัพพี + ไข่ต้ม 2 ฟอง + ผัดผักรวมน้ำมันน้อย + นมจืดพร่องมันเนย 1 กล่อง<br><span class="hint">หรือ โจ๊กข้าวกล้องใส่ไข่ + ผัก / ขนมปังโฮลวีต 2 แผ่น + ไข่ + นม</span></td></tr>
+      <tr><td><span class="meal">🍎</span><b>ว่างเช้า</b></td><td>ผลไม้ 1 ส่วน (ฝรั่ง ½ ผล / ส้ม 1 ผล / แอปเปิล 1 ผล)</td></tr>
+      <tr><td><span class="meal">☀️</span><b>กลางวัน</b></td><td>ข้าวกล้อง ${lowCal ? "1½" : "2"} ทัพพี + แกงจืดเต้าหู้หมูสับ + ปลานึ่งมะนาว / ยำอกไก่ + ผักสด<br><span class="hint">อาหารจานเดียว: ก๋วยเตี๋ยวน้ำใส ไก่/ปลา เพิ่มผัก ไม่เติมน้ำตาล · ข้าวกะเพราไก่ไข่ต้ม (ไม่ทอดไข่) + ผักแนม</span></td></tr>
+      <tr><td><span class="meal">🥛</span><b>ว่างบ่าย</b></td><td>โยเกิร์ตไขมันต่ำ 1 ถ้วย / นมถั่วเหลืองไม่หวาน / ถั่วอบ 1 กำมือเล็ก</td></tr>
+      <tr><td><span class="meal">🌙</span><b>เย็น</b></td><td>ข้าวกล้อง ${lowCal ? "1" : "1½"} ทัพพี + ต้มยำปลา/กุ้ง (น้ำใส) + ผักลวกน้ำพริก + ไก่ย่าง (ไม่กินหนัง)<br><span class="hint">หรือ สุกี้น้ำ (น้ำจิ้มน้อย) · แกงส้มผักรวมกับปลา · ส้มตำไม่ใส่ปูปลาร้า + ไก่ย่าง + ข้าวเหนียว 1 ทัพพีเล็ก</span></td></tr>
     </tbody></table>
     <p class="hint">ดื่มน้ำเปล่าระหว่างวัน งดชาไข่มุก น้ำหวาน น้ำอัดลม ขนมกรุบกรอบ ของทอด ถ้าหิวระหว่างมื้อ เลือกผักสด ไข่ต้ม หรือนมจืด</p>`, false));
 
@@ -189,6 +293,7 @@ function healthGuide(d, a){
   if (has(d.edema) && d.edema > 0.40) doctor.push("ค่าบวมน้ำ (ECW/TBW) > 0.40");
   if (has(d.waist) && d.waist > waistLim + 10) doctor.push("รอบเอวเกินเกณฑ์มากกว่า 10 ซม.");
   parts.push(guideSection("💡 เรื่องอื่น ๆ ที่เกี่ยวข้อง", `
+    ${iconRow([["😴", "นอน 7–9 ชม."], ["💧×8", "น้ำ 8–10 แก้ว"], ["🧘", "จัดการความเครียด"], ["🩺", "ตรวจสุขภาพประจำปี"], ["📊", "วัดซ้ำ 4–8 สัปดาห์"]])}
     <ul class="recs">
       <li><b>นอนหลับ 7–9 ชั่วโมง</b> – นอนน้อยทำให้ฮอร์โมนความหิวเพิ่ม อยากของหวาน และกล้ามเนื้อฟื้นตัวช้า</li>
       <li><b>ดื่มน้ำสะอาดวันละ 8–10 แก้ว</b>${has(d.weight) ? ` (ประมาณ ${fmt(d.weight * 0.033, 1)} ลิตรสำหรับน้ำหนักของคุณ)` : ""} – ค่าน้ำในร่างกายของ InBody จะแม่นขึ้นเมื่อร่างกายได้น้ำพอ</li>
@@ -199,10 +304,31 @@ function healthGuide(d, a){
     </ul>
     ${doctor.length ? `<p class="mmsg bad"><b>ควรพบแพทย์</b> เนื่องจาก: ${doctor.join(", ")}</p>` : `<p class="hint">ควรพบแพทย์หากมีโรคประจำตัว ตั้งครรภ์ น้ำหนักลด/เพิ่มเร็วผิดปกติ หรือมีอาการบวม เหนื่อยง่าย</p>`}`, false));
 
-  parts.push(`<h3>แหล่งอ้างอิง</h3><ul class="recs refs">${GUIDE_REFS.map(([t, u]) => `<li><a href="${u}" target="_blank" rel="noopener">${t}</a></li>`).join("")}</ul>
-    <p class="hint">ปริมาณโปรตีนและแคลเซียมในอาหารเป็นค่าโดยประมาณจากตารางคุณค่าทางโภชนาการอาหารไทย ค่าจริงขึ้นกับยี่ห้อและวิธีปรุง คำแนะนำนี้ใช้สำหรับผู้ใหญ่สุขภาพทั่วไป ไม่ใช้แทนคำแนะนำจากแพทย์หรือนักกำหนดอาหาร</p>`);
+  parts.push(`<div class="ggrid">${guideCards.join("")}</div>`);
+  parts.push(`<details style="margin-top:14px"><summary>แหล่งอ้างอิง</summary><ul class="recs refs">${GUIDE_REFS.map(([t, u]) => `<li><a href="${u}" target="_blank" rel="noopener">${t}</a></li>`).join("")}</ul>
+    <p class="hint">ปริมาณโปรตีนและแคลเซียมในอาหารเป็นค่าโดยประมาณจากตารางคุณค่าทางโภชนาการอาหารไทย ค่าจริงขึ้นกับยี่ห้อและวิธีปรุง คำแนะนำนี้ใช้สำหรับผู้ใหญ่สุขภาพทั่วไป ไม่ใช้แทนคำแนะนำจากแพทย์หรือนักกำหนดอาหาร</p></details>`);
 
   return `<section class="card"><h2>คู่มือสุขภาพสำหรับผลของคุณ</h2>
-    <p class="hint">อ้างอิงคำแนะนำของกรมอนามัย กระทรวงสาธารณสุข ตัวเลขด้านล่างคำนวณจากผลวัดของคุณ กดที่หัวข้อเพื่อเปิดอ่าน</p>
-    ${parts.join("")}</section>`;
+    <p class="hint">อ้างอิงคำแนะนำของกรมอนามัย กระทรวงสาธารณสุข ตัวเลขด้านล่างคำนวณจากผลวัดของคุณ กดที่ปุ่มเพื่อดูรายละเอียดและภาพประกอบ</p>
+    ${parts.join("")}
+    <div class="print-only">${Object.values(guideBodies).slice(-guideCards.length).map(g => `<h3>${g.icon} ${g.name}</h3>${g.body}`).join("")}</div></section>`;
 }
+
+// ---------- หน้าต่างรายละเอียด ----------
+function openGuide(id){
+  const g = guideBodies[id];
+  const dlg = document.getElementById("guideDlg");
+  if (!g || !dlg) return;
+  dlg.style.setProperty("--gc", g.color);
+  dlg.querySelector(".dlg-title").innerHTML = `<span class="gicon">${g.icon}</span>${g.name}`;
+  dlg.querySelector(".dlg-body").innerHTML = g.body;
+  dlg.querySelector(".dlg-body").scrollTop = 0;
+  if (dlg.showModal) dlg.showModal(); else dlg.setAttribute("open", "");
+}
+
+document.addEventListener("click", e => {
+  const card = e.target.closest("[data-guide]");
+  if (card) return openGuide(card.dataset.guide);
+  const dlg = document.getElementById("guideDlg");
+  if (dlg && (e.target.closest(".dlg-close") || e.target === dlg)) dlg.close ? dlg.close() : dlg.removeAttribute("open");
+});
