@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#d63384">
+<title>รู้ทันมะเร็งเต้านม · เข้าเกม</title>
+<meta name="description" content="เข้าร่วมเกมควิซรู้ทันมะเร็งเต้านม ใส่ Game PIN 4 หลัก ตั้งชื่อเล่น และเลือก Avatar">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.wrap{max-width:560px;min-height:100dvh;display:flex;flex-direction:column;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+main{flex:1;display:flex;flex-direction:column;justify-content:center}
+.screen{animation:pop .35s ease-out both}
+.center{text-align:center}
+h1{font-size:2rem;margin:.2em 0}
+h2{margin:.2em 0 .5em}
+.field{display:block;margin:14px 0}
+.field span{display:block;font-weight:600;margin-bottom:6px}
+.field small{font-weight:400}
+.inp{width:100%;padding:14px 16px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--ink);font-size:1.15rem;outline:none}
+.inp:focus{border-color:#ff2e7e}
+.pin-inp{text-align:center;font-size:2.4rem;letter-spacing:.4em;font-weight:700;padding:12px}
+.avs{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:8px;max-height:230px;overflow:auto;padding:4px}
+.avs button{background:transparent;border-radius:50%;padding:3px;border:3px solid transparent;display:grid;place-items:center}
+.avs button[aria-pressed="true"]{border-color:#ff2e7e;transform:scale(1.08)}
+.err{color:var(--false);font-weight:600;min-height:1.4em;margin:8px 0 0}
+.me-bar{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.me-bar .who{display:flex;align-items:center;gap:8px;font-weight:600;min-width:0}
+.me-bar .who span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.big-av{animation:bob 2.4s ease-in-out infinite;display:inline-block;margin:10px 0}
+.qcard{font-size:1.25rem;line-height:1.45;font-weight:600;text-align:center}
+.tbar{height:10px;border-radius:5px;background:rgba(255,255,255,.3);overflow:hidden;margin:14px 0}
+.tbar i{display:block;height:100%;background:#fff;width:100%}
+.ans{display:grid;gap:14px;margin-top:6px}
+.ans .opt{font-size:1.7rem;min-height:22vh;justify-content:center;width:100%}
+.ans .opt:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.25)}
+.res{border-radius:24px;padding:30px 20px;text-align:center}
+.res.ok{background:var(--true)}.res.no{background:var(--false)}.res.none{background:#5a4b7a}
+.res .ic{font-size:4.5rem;line-height:1}
+.res .pts{font-size:2.2rem;font-weight:700;margin:6px 0}
+.spinner{width:56px;height:56px;border-radius:50%;border:6px solid rgba(255,255,255,.3);border-top-color:#fff;margin:18px auto;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rank-big{font-size:5rem;font-weight:700;line-height:1}
+.foot{text-align:center;opacity:.8;font-size:.85rem;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="me-bar">
+    <div class="logo" style="font-size:1.15rem"><span class="rib">🎗️</span><span id="ttl">รู้ทันมะเร็งเต้านม</span></div>
+    <button class="icon-btn" id="btnMute" title="เปิด/ปิดเสียง" style="width:40px;height:40px;font-size:1.1rem">🔊</button>
+  </div>
+  <div class="me-bar hidden" id="meBar" style="margin-top:10px">
+    <div class="who" id="who"></div>
+    <span class="tag" id="myScore">0</span>
+  </div>
+
+  <main>
+    <!-- ใส่ PIN -->
+    <section id="s-pin" class="screen">
+      <div class="center"><div style="font-size:4rem" class="big-av">🎗️</div><h1>เข้าร่วมเกม</h1></div>
+      <form class="card" id="fPin" autocomplete="off">
+        <label class="field"><span>Game PIN</span>
+          <input class="inp pin-inp" id="inPin" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" required></label>
+        <button class="btn pink big" style="width:100%" id="btnPin">เข้าร่วม</button>
+        <p class="err" id="pinErr"></p>
+      </form>
+    </section>
+
+    <!-- กำลังเชื่อมต่อ -->
+    <section id="s-load" class="screen hidden center">
+      <div class="spinner"></div>
+      <h2 id="loadMsg">กำลังเชื่อมต่อ…</h2>
+    </section>
+
+    <!-- ตั้งชื่อ -->
+    <section id="s-prof" class="screen hidden">
+      <form class="card" id="fProf" autocomplete="off">
+        <h2>ตั้งชื่อเล่น & เลือก Avatar</h2>
+        <label class="field"><span>ชื่อเล่น <small class="muted">(แสดงบนจอ)</small></span>
+          <input class="inp" id="inNick" maxlength="16" placeholder="เช่น มิ้นท์" required></label>
+        <div class="field"><span>Avatar ที่ชอบ</span><div class="avs" id="avs" role="group" aria-label="เลือก Avatar"></div></div>
+        <label class="field"><span>ชื่อ-นามสกุลจริง <small class="muted">(ไม่แสดงบนจอ ใช้บันทึกผลคะแนนเท่านั้น)</small></span>
+          <input class="inp" id="inName" maxlength="80" placeholder="ชื่อ นามสกุล" autocomplete="name" required></label>
+        <button class="btn pink big" style="width:100%">พร้อมแล้ว! 🚀</button>
+        <p class="err" id="profErr"></p>
+      </form>
+    </section>
+
+    <!-- ห้องรอ / สถานะทั่วไป -->
+    <section id="s-wait" class="screen hidden center">
+      <div id="waitAv"></div>
+      <h1 id="waitTitle"></h1>
+      <p style="font-size:1.15rem" id="waitSub"></p>
+      <div class="spinner" id="waitSpin"></div>
+    </section>
+
+    <!-- ตอบคำถาม -->
+    <section id="s-q" class="screen hidden">
+      <div class="me-bar"><span class="tag" id="qNum"></span><span class="tag" id="qLeft"></span></div>
+      <div class="tbar"><i id="tbar"></i></div>
+      <div class="card qcard" id="qText"></div>
+      <div class="ans" style="margin-top:16px">
+        <button class="opt t" data-a="1"><span class="shape">◯</span><span>ถูกต้อง</span></button>
+        <button class="opt f" data-a="0"><span class="shape">✕</span><span>ไม่ถูกต้อง</span></button>
+      </div>
+    </section>
+
+    <!-- ผลแต่ละข้อ -->
+    <section id="s-res" class="screen hidden">
+      <div class="res" id="resBox"></div>
+      <p class="center" style="font-size:1.2rem;margin-top:16px" id="resRank"></p>
+    </section>
+
+    <!-- จบเกม -->
+    <section id="s-end" class="screen hidden center">
+      <div id="endAv"></div>
+      <div style="font-size:1.3rem">คุณได้อันดับที่</div>
+      <div class="rank-big" id="endRank">-</div>
+      <p style="font-size:1.25rem" id="endInfo"></p>
+      <div class="card" style="text-align:left;margin-top:12px">
+        <b>💗 อย่าลืม!</b> ตรวจเต้านมด้วยตนเองทุกเดือน ด้วยการดูและคลำ ถ้าพบความผิดปกติ ให้รีบไปพบแพทย์
+      </div>
+    </section>
+  </main>
+  <div class="foot" id="foot"></div>
+</div>
+
+<script src="vendor/mqtt.min.js"></script>
+<script src="questions.js"></script>
+<script src="common.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const A = QZ.audio, esc = QZ.esc;
+  let net = null, pin = null, state = null, me = null, prof = null, offset = 0, tInt = null, joinTO = null, lastRes = "";
+  let av = Math.floor(Math.random() * QZ.AVATARS.length);
+  const keyOf = (p) => "bcq-player-" + p;
+
+  $("ttl").textContent = QUIZ.title;
+  document.title = QUIZ.title + " · เข้าเกม";
+  const show = (id) => { for (const s of document.querySelectorAll("section.screen")) s.classList.toggle("hidden", s.id !== "s-" + id); };
+  A.setMuted(!!QZ.store.get("bcq-muted"));
+  $("btnMute").textContent = A.muted ? "🔇" : "🔊";
+  $("btnMute").onclick = () => { A.unlock(); A.setMuted(!A.muted); QZ.store.set("bcq-muted", A.muted); $("btnMute").textContent = A.muted ? "🔇" : "🔊"; };
+  const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
+
+  /* ---------- Avatar ---------- */
+  function renderAvs() {
+    $("avs").innerHTML = QZ.AVATARS.map((_, i) => `<button type="button" data-i="${i}" aria-pressed="${i === av}">${QZ.avatarHTML(i, 46)}</button>`).join("");
+  }
+  $("avs").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    av = +b.dataset.i; A.sfx("tap");
+    for (const x of $("avs").children) x.setAttribute("aria-pressed", x === b);
+  };
+
+  /* ---------- เชื่อมต่อ ---------- */
+  $("inPin").oninput = () => { $("inPin").value = $("inPin").value.replace(/\D/g, "").slice(0, 4); $("pinErr").textContent = ""; };
+  $("fPin").onsubmit = (e) => { e.preventDefault(); A.unlock(); connect($("inPin").value); };
+
+  async function connect(p) {
+    if (!/^\d{4}$/.test(p)) { $("pinErr").textContent = "กรุณาใส่ PIN 4 หลัก"; return; }
+    pin = p; show("load"); $("loadMsg").textContent = "กำลังเชื่อมต่อ…";
+    if (net) net.stop();
+    state = null; me = null;
+    net = new QZ.Net(pin, onMsg);
+    await net.start();
+    if (!(await net.waitConnected(15000))) return fail("เชื่อมต่อเซิร์ฟเวอร์เกมไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่");
+    $("loadMsg").textContent = "กำลังค้นหาห้อง…";
+    net.subscribe("state");
+    const t0 = Date.now();
+    while (!state && Date.now() - t0 < 6000) await new Promise((r) => setTimeout(r, 150));
+    if (!state || state.phase === "closed") return fail(state ? "ห้องนี้ปิดไปแล้ว" : "ไม่พบห้องเกม PIN " + pin + " ลองตรวจสอบ PIN อีกครั้ง");
+    const saved = QZ.store.get(keyOf(pin));
+    if (saved && saved.roomId === state.roomId) { prof = saved; rejoin(); }
+    else openProfile(saved);
+  }
+  function fail(msg) {
+    if (net) net.stop(); net = null;
+    show("pin"); $("pinErr").textContent = msg;
+  }
+  function openProfile(prev) {
+    prof = null; me = null;
+    $("meBar").classList.add("hidden");
+    if (prev) { $("inNick").value = prev.nick || ""; $("inName").value = prev.name || ""; av = prev.av ?? av; }
+    renderAvs(); show("prof");
+  }
+  $("fProf").onsubmit = (e) => {
+    e.preventDefault();
+    const nick = $("inNick").value.trim(), name = $("inName").value.trim();
+    if (!nick) return ($("profErr").textContent = "กรุณาตั้งชื่อเล่น");
+    if (name.length < 3) return ($("profErr").textContent = "กรุณากรอกชื่อ-นามสกุลจริง");
+    $("profErr").textContent = "";
+    prof = { roomId: state.roomId, pid: QZ.rid(12), nick, name, av, answered: {} };
+    QZ.store.set(keyOf(pin), prof);
+    A.sfx("join");
+    join();
+  };
+  function join() {
+    net.subscribe("p/" + prof.pid);
+    const send = () => net.publish("up", { t: "join", roomId: prof.roomId, pid: prof.pid, nick: prof.nick, name: prof.name, av: prof.av });
+    send();
+    show("load"); $("loadMsg").textContent = "กำลังเข้าห้อง…";
+    clearInterval(joinTO);
+    joinTO = setInterval(() => (me ? clearInterval(joinTO) : send()), 4000);
+  }
+  function rejoin() {
+    net.subscribe("p/" + prof.pid);
+    show("load"); $("loadMsg").textContent = "กำลังกลับเข้าห้อง…";
+    net.publish("up", { t: "hello", roomId: prof.roomId, pid: prof.pid });
+    clearInterval(joinTO);
+    joinTO = setInterval(() => (me ? clearInterval(joinTO) : join()), 5000);
+  }
+
+  function onMsg(sub, m, retained) {
+    if (sub === "state") {
+      if (!m) return;
+      if (state && m.roomId === state.roomId && m.ts < state.ts) return;
+      if (!retained) offset = m.ts - Date.now();
+      const changedRoom = state && prof && m.roomId !== state.roomId && m.phase !== "closed";
+      state = m;
+      if (changedRoom) { const prev = prof; net.unsubscribe("p/" + prev.pid); openProfile(prev); return; }
+      render();
+    } else if (prof && sub === "p/" + prof.pid) {
+      if (!m || m.roomId !== prof.roomId) return;
+      if (m.t === "kicked") { me = null; clearInterval(joinTO); QZ.store.del(keyOf(pin)); return waitScreen("", "คุณถูกนำออกจากห้อง", "ติดต่อครูผู้สอน", false); }
+      if (m.t === "unknown") { QZ.store.del(keyOf(pin)); return openProfile(prof); }
+      if (m.t === "me") { me = m; render(); }
+    }
+  }
+
+  /* ---------- หน้าจอ ---------- */
+  function waitScreen(avHTML, title, sub, spin = true) {
+    $("waitAv").innerHTML = avHTML; $("waitTitle").textContent = title; $("waitSub").textContent = sub;
+    $("waitSpin").classList.toggle("hidden", !spin);
+    show("wait");
+  }
+  const meAv = (s) => `<span class="big-av">${QZ.avatarHTML(me.av, s)}</span>`;
+
+  function render() {
+    clearInterval(tInt);
+    if (!state) return;
+    if (state.phase === "closed") { $("meBar").classList.add("hidden"); return waitScreen("🎗️", "เกมจบแล้ว", "ขอบคุณที่ร่วมเล่น!", false); }
+    if (!me || !prof) return;
+    $("meBar").classList.remove("hidden");
+    $("who").innerHTML = `${QZ.avatarHTML(me.av, 34)}<span>${esc(me.nick)}</span>`;
+    $("myScore").textContent = me.score.toLocaleString() + " คะแนน";
+    const qi = state.qi, ph = state.phase;
+    const meFresh = me.qi === qi && me.phase === ph;
+    if (ph === "lobby") return waitScreen(meAv(110), "เข้าห้องแล้ว! 🎉", "ดูชื่อของคุณบนจอ แล้วรอครูเริ่มเกม");
+    if (ph === "ready") return waitScreen(`<div class="tag" style="font-size:1.2rem">ข้อที่ ${qi + 1} / ${state.total}</div>`, "เตรียมตัว…", state.text || "");
+    if (ph === "question") {
+      if (qi in prof.answered || (me.qi === qi && me.answered)) return waitScreen(meAv(90), "ส่งคำตอบแล้ว ⏳", "รอดูเฉลยบนจอ");
+      $("qNum").textContent = `ข้อที่ ${qi + 1} / ${state.total}`;
+      $("qText").textContent = state.text || "";
+      show("q");
+      const tk = () => {
+        const left = Math.max(0, state.endAt - (Date.now() + offset));
+        $("qLeft").textContent = "⏱ " + Math.ceil(left / 1000) + " วิ";
+        $("tbar").style.width = Math.min(100, (left / state.dur) * 100) + "%";
+      };
+      tk(); tInt = setInterval(tk, 200);
+      return;
+    }
+    if (ph === "reveal" || ph === "board") {
+      if (!meFresh || me.last === undefined) return waitScreen(meAv(90), "กำลังตรวจคำตอบ…", "");
+      const L = me.last, key = qi + (L ? (L.ok ? "ok" : "no") : "none");
+      const ans = state.answer ? "ถูกต้อง" : "ไม่ถูกต้อง";
+      $("resBox").className = "res " + (L ? (L.ok ? "ok" : "no") : "none");
+      $("resBox").innerHTML = L
+        ? (L.ok
+          ? `<div class="ic">✔</div><h1>ถูกต้อง!</h1><div class="pts">+${L.pts}</div>${me.streak >= 2 ? `<div class="tag">🔥 ตอบถูกติดกัน ${me.streak} ข้อ</div>` : ""}`
+          : `<div class="ic">✘</div><h1>ยังไม่ถูก</h1><p>เฉลยคือ "${ans}"</p><div class="tag">สู้ ๆ ข้อหน้า!</div>`)
+        : `<div class="ic">⌛</div><h1>หมดเวลา</h1><p>เฉลยคือ "${ans}"</p>`;
+      $("resRank").innerHTML = `อันดับที่ <b>${me.rank}</b> จาก ${me.of} คน`;
+      show("res");
+      if (lastRes !== key) { lastRes = key; if (L?.ok) { A.sfx("correct"); buzz([60, 40, 60]); } else { A.sfx("wrong"); buzz(300); } }
+      return;
+    }
+    if (ph === "end") {
+      if (me.phase !== "end") return waitScreen(meAv(90), "กำลังสรุปผล…", "");
+      $("endAv").innerHTML = meAv(110);
+      $("endRank").textContent = me.rank;
+      const st = me.stats || { ok: 0 };
+      $("endInfo").innerHTML = `จาก ${me.of} คน<br><b>${me.score.toLocaleString()}</b> คะแนน · ตอบถูก ${st.ok}/${state.total} ข้อ`;
+      show("end");
+      if (lastRes !== "end") { lastRes = "end"; if (me.rank <= 3) { QZ.confetti(); A.sfx("fanfare"); } else A.sfx("correct"); }
+    }
+  }
+
+  document.querySelector(".ans").onclick = (e) => {
+    const b = e.target.closest(".opt");
+    if (!b || !state || state.phase !== "question" || !prof || state.qi in prof.answered) return;
+    const qi = state.qi;
+    prof.answered[qi] = b.dataset.a === "1";
+    QZ.store.set(keyOf(pin), prof);
+    net.publish("up", { t: "ans", roomId: prof.roomId, pid: prof.pid, q: qi, a: prof.answered[qi] });
+    A.sfx("tap"); buzz(40);
+    render();
+  };
+
+  // กลับมาที่แท็บ → ขอสถานะล่าสุด
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && net && prof) net.publish("up", { t: "hello", roomId: prof.roomId, pid: prof.pid });
+  });
+
+  const qp = new URLSearchParams(location.search).get("pin");
+  if (qp && /^\d{4}$/.test(qp)) { $("inPin").value = qp; connect(qp); }
+  else show("pin");
+  renderAvs();
+})();
+</script>
+</body>
+</html>
