@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>รู้ทันมะเร็งเต้านม · หน้าครู</title>
+<meta name="description" content="หน้าจอครูสำหรับเปิดห้องเกมควิซมะเร็งเต้านม แสดง PIN, QR Code, กระดานคะแนน และผลรายชื่อจริง">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.screen{animation:pop .35s ease-out both}
+.center{text-align:center}
+h1{font-size:clamp(2rem,5vw,3.6rem);margin:.2em 0}
+/* setup */
+.hero{display:grid;place-items:center;min-height:75vh;text-align:center}
+.hero .rib{font-size:5rem;animation:bob 2.4s ease-in-out infinite}
+.setup-card{max-width:520px;width:100%;margin:18px auto 0;text-align:left}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.row label{font-weight:600}
+select{font:inherit;padding:8px 12px;border-radius:10px;border:2px solid var(--line);background:var(--card);color:var(--ink)}
+/* lobby */
+.lobby-head{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:stretch}
+.join-box{display:flex;flex-direction:column;justify-content:center;gap:6px}
+.join-box .url{font-size:clamp(1rem,1.8vw,1.35rem);word-break:break-all}
+.pin{font-size:clamp(4rem,11vw,8.5rem);font-weight:700;letter-spacing:.12em;line-height:1;color:#2b1d4a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pin{color:#fff}}
+:root[data-theme="dark"] .pin{color:#fff}
+.qr{background:#fff;border-radius:20px;padding:12px;width:clamp(180px,24vw,300px);aspect-ratio:1;display:grid;place-items:center}
+.qr svg{width:100%;height:100%}
+.players{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;align-content:flex-start;margin-top:18px;min-height:120px}
+.pl{display:flex;align-items:center;gap:8px;background:var(--pill);padding:6px 14px 6px 6px;border-radius:999px;font-weight:600;font-size:1.15rem;animation:pop .4s ease-out both;color:#fff}
+.pl:hover{background:rgba(255,255,255,.3)}
+.lobby-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px}
+.count{font-size:1.4rem;font-weight:700}
+/* question */
+.qhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.qtext{font-size:clamp(1.6rem,3.6vw,2.9rem);font-weight:700;line-height:1.35;text-align:center;padding:clamp(18px,3vw,36px)}
+.qmid{display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:center;margin:22px 0}
+.timer{width:clamp(96px,11vw,140px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:clamp(2.2rem,4.5vw,3.6rem);font-weight:700;background:conic-gradient(#fff var(--p,100%),rgba(255,255,255,.2) 0);color:#2b1d4a;position:relative}
+.timer span{position:absolute;inset:10px;border-radius:50%;background:#fff;display:grid;place-items:center}
+.timer.low span{color:var(--false);animation:pulse .5s infinite}
+.answered{text-align:center;font-size:1.2rem}
+.answered b{display:block;font-size:clamp(2.2rem,4.5vw,3.4rem)}
+.ready-num{font-size:clamp(5rem,14vw,10rem);font-weight:700;animation:pulse 1s infinite}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.opts .opt{font-size:clamp(1.5rem,3vw,2.4rem);min-height:clamp(90px,13vh,140px);position:relative}
+.opt .cnt{margin-left:auto;font-size:.9em;background:rgba(0,0,0,.2);padding:2px 16px;border-radius:12px}
+.bar{height:12px;border-radius:6px;background:rgba(255,255,255,.35);margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:#fff;transition:width .8s}
+.explain{margin-top:18px;font-size:clamp(1.1rem,2vw,1.5rem);line-height:1.5}
+.fast{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+/* board */
+.board{max-width:820px;margin:0 auto}
+.brow{display:flex;align-items:center;gap:14px;background:var(--card);color:var(--ink);border-radius:16px;padding:10px 18px;margin:10px 0;font-size:clamp(1.2rem,2.2vw,1.7rem);font-weight:600;animation:pop .45s ease-out both}
+.brow .rk{width:2em;text-align:center;font-weight:700}
+.brow .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .sc{font-weight:700}
+.brow .up{font-size:.7em;color:var(--true)}
+/* podium */
+.podium{display:flex;justify-content:center;align-items:flex-end;gap:clamp(8px,2vw,24px);margin-top:28px;min-height:52vh}
+.pod{display:flex;flex-direction:column;align-items:center;width:clamp(110px,22vw,230px);animation:pop .6s ease-out both}
+.pod .nm{font-size:clamp(1.1rem,2.2vw,1.8rem);font-weight:700;margin:8px 0 2px;text-align:center;word-break:break-word}
+.pod .sc{opacity:.9;margin-bottom:8px}
+.pod .blk{width:100%;border-radius:16px 16px 0 0;display:grid;place-items:start center;padding-top:12px;font-size:clamp(2.4rem,5vw,4rem);font-weight:700;color:#2b1d4a}
+.p1 .blk{height:36vh;background:var(--gold)} .p2 .blk{height:26vh;background:var(--silver)} .p3 .blk{height:18vh;background:var(--bronze)}
+.p1{animation-delay:1.6s}.p2{animation-delay:.9s}.p3{animation-delay:.2s}
+/* modal */
+dialog{border:0;border-radius:20px;padding:0;max-width:min(1100px,96vw);width:100%;background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(20,0,40,.6)}
+.mhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:18px 22px;border-bottom:1px solid var(--line)}
+.mbody{padding:12px 22px 22px;max-height:72vh;overflow:auto}
+table{border-collapse:collapse;width:100%;font-family:"Sarabun","Kanit",sans-serif;font-size:1rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:var(--card)}
+td.num,th.num{text-align:right}
+.seg{display:inline-flex;background:var(--line);border-radius:10px;padding:3px}
+.seg button{padding:6px 12px;border-radius:8px;background:transparent;color:var(--ink);font-weight:600}
+.seg button.on{background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.net{font-size:.95rem}
+.net i{display:inline-block;width:10px;height:10px;border-radius:50%;background:#ffd166;margin-right:6px}
+.net.ok i{background:#06d6a0}.net.bad i{background:#ff4d4d}
+@media (max-width:760px){
+  .lobby-head{grid-template-columns:1fr}.qr{margin:0 auto}
+  .qmid{grid-template-columns:1fr 1fr}.qmid .qtext-wrap{grid-column:1/-1;order:-1}
+  .opts{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo"><span class="rib">🎗️</span><span id="ttl">รู้ทันมะเร็งเต้านม</span></div>
+    <div class="row" style="margin:0">
+      <span class="net tag" id="net"><i></i>ยังไม่เชื่อมต่อ</span>
+      <button class="icon-btn" id="btnResults" title="ผลคะแนน (สำหรับครู)">📋</button>
+      <button class="icon-btn" id="btnMute" title="เปิด/ปิดเสียง">🔊</button>
+      <button class="icon-btn" id="btnFull" title="เต็มจอ">⛶</button>
+    </div>
+  </div>
+
+  <!-- 1. เริ่มต้น -->
+  <section id="s-setup" class="screen hero">
+    <div style="width:100%">
+      <div class="rib">🎗️</div>
+      <h1 id="heroTitle">รู้ทันมะเร็งเต้านม</h1>
+      <p style="font-size:1.25rem;margin:0" id="heroSub"></p>
+      <div class="card setup-card">
+        <div id="resumeBox" class="hidden" style="margin-bottom:14px;padding:14px;border-radius:14px;background:#fff3c4;color:#5a4300">
+          มีเกมที่ยังเล่นค้างอยู่ (PIN <b id="resumePin"></b>)
+          <div class="row"><button class="btn green" id="btnResume">เล่นต่อห้องเดิม</button></div>
+        </div>
+        <div class="row"><label for="selTime">เวลาต่อข้อ</label>
+          <select id="selTime"><option value="10">10 วินาที</option><option value="15">15 วินาที</option><option value="20">20 วินาที</option><option value="30">30 วินาที</option><option value="45">45 วินาที</option></select>
+        </div>
+        <div class="row"><label><input type="checkbox" id="chkMusic" checked> เปิดดนตรีประกอบ</label></div>
+        <p class="muted" style="margin:6px 0 14px" id="qInfo"></p>
+        <button class="btn pink big" id="btnCreate" style="width:100%">🎮 สร้างห้องเกม</button>
+        <p class="muted hidden" id="setupMsg" style="margin:12px 0 0"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. ห้องรอ -->
+  <section id="s-lobby" class="screen hidden">
+    <div class="lobby-head">
+      <div class="card join-box">
+        <div class="muted" style="font-size:1.2rem">สแกน QR หรือเข้าเว็บ แล้วใส่ PIN</div>
+        <div class="url"><b id="joinUrl"></b></div>
+        <div class="muted" style="margin-top:6px">Game PIN</div>
+        <div class="pin" id="pin">----</div>
+      </div>
+      <div class="qr" id="qr"></div>
+    </div>
+    <div class="lobby-foot">
+      <div class="count">👥 <span id="nPlayers">0</span> คน</div>
+      <div class="muted" style="color:#fff;opacity:.85">แตะชื่อเล่นเพื่อนำผู้เล่นออก</div>
+      <button class="btn light big" id="btnStart" disabled>เริ่มเกม ▶</button>
+    </div>
+    <div class="players" id="players"><p style="opacity:.8;font-size:1.3rem">รอผู้เล่นเข้าห้อง…</p></div>
+  </section>
+
+  <!-- 3. เตรียมตัว -->
+  <section id="s-ready" class="screen hidden center">
+    <div class="tag" style="font-size:1.3rem;margin-top:6vh" id="rNum"></div>
+    <div class="qtext" id="rText"></div>
+    <div class="ready-num" id="rCount">3</div>
+  </section>
+
+  <!-- 4. คำถาม / เฉลย -->
+  <section id="s-question" class="screen hidden">
+    <div class="qhead">
+      <span class="tag" style="font-size:1.2rem" id="qNum"></span>
+      <span class="tag" style="font-size:1.2rem">PIN <b id="qPin"></b></span>
+    </div>
+    <div class="qmid">
+      <div class="timer" id="timer"><span id="tNum">20</span></div>
+      <div class="qtext-wrap"><div class="card qtext" id="qText"></div></div>
+      <div class="answered"><b id="nAns">0</b>คำตอบ</div>
+    </div>
+    <div class="opts">
+      <div class="opt t" id="optT"><span class="shape">◯</span><span>ถูกต้อง</span><span class="cnt hidden" id="cT">0</span></div>
+      <div class="opt f" id="optF"><span class="shape">✕</span><span>ไม่ถูกต้อง</span><span class="cnt hidden" id="cF">0</span></div>
+    </div>
+    <div id="revealBox" class="hidden">
+      <div class="card explain"><b id="ansLabel"></b> <span id="explain"></span>
+        <div id="fastBox"></div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:18px">
+      <button class="btn ghost" id="btnSkip">⏭ หยุดเวลา</button>
+      <button class="btn light big hidden" id="btnNext">ถัดไป ▶</button>
+    </div>
+  </section>
+
+  <!-- 5. กระดานคะแนน -->
+  <section id="s-board" class="screen hidden">
+    <h1 class="center">🏆 กระดานคะแนน</h1>
+    <div class="board" id="board"></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn light big" id="btnNextQ">ข้อถัดไป ▶</button></div>
+  </section>
+
+  <!-- 6. จบเกม -->
+  <section id="s-end" class="screen hidden center">
+    <h1>🎉 ผู้ชนะ 🎉</h1>
+    <div class="podium" id="podium"></div>
+    <div class="row" style="justify-content:center;margin-top:20px">
+      <button class="btn light" id="btnShowRes">📋 ดูผลรายชื่อจริง</button>
+      <button class="btn ghost" id="btnClose">ปิดห้อง / เริ่มใหม่</button>
+    </div>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <div class="mhead">
+    <div><b style="font-size:1.25rem">📋 ผลคะแนน (สำหรับครู)</b><div class="muted" style="font-size:.9rem">มีชื่อ-นามสกุลจริง ไม่ควรแสดงบนโปรเจกเตอร์</div></div>
+    <div class="row" style="margin:0">
+      <div class="seg" id="sortSeg"><button data-s="score" class="on">เรียงตามคะแนน</button><button data-s="speed">เรียงตามความเร็ว</button></div>
+      <button class="btn green" id="btnCsv">⬇ ดาวน์โหลด Excel (CSV)</button>
+      <button class="btn" id="btnDlgClose">ปิด</button>
+    </div>
+  </div>
+  <div class="mbody">
+    <table><thead><tr><th class="num">อันดับ</th><th>ชื่อ-นามสกุล</th><th>ชื่อเล่น</th><th class="num">คะแนน</th><th class="num">ตอบถูก</th><th class="num">เวลาตอบเฉลี่ย</th><th class="num">ตอบถูกเร็วสุด (ข้อ)</th></tr></thead><tbody id="resBody"></tbody></table>
+    <h3 style="margin-top:22px">⚡ คนที่ตอบถูกเร็วที่สุดในแต่ละข้อ</h3>
+    <table><thead><tr><th>ข้อ</th><th>ชื่อ-นามสกุล</th><th>ชื่อเล่น</th><th class="num">เวลา</th><th class="num">ตอบถูก / ตอบทั้งหมด</th></tr></thead><tbody id="fastBody"></tbody></table>
+  </div>
+</dialog>
+
+<script src="vendor/mqtt.min.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="questions.js"></script>
+<script src="common.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const Q = QUIZ.questions, A = QZ.audio, esc = QZ.esc;
+  const SAVE = "bcq-host-game";
+  let G = null, net = null, tickInt = null, readyTO = null, beatInt = null, lastTick = -1, sortBy = "score";
+
+  document.title = QUIZ.title + " · หน้าครู";
+  $("ttl").textContent = $("heroTitle").textContent = QUIZ.title;
+  $("heroSub").textContent = QUIZ.subtitle;
+  $("qInfo").textContent = `คำถาม ${Q.length} ข้อ · ตัวเลือก ถูกต้อง / ไม่ถูกต้อง`;
+  $("selTime").value = String(QUIZ.timeLimit);
+
+  /* ---------- ตัวช่วย ---------- */
+  const show = (id) => { for (const s of document.querySelectorAll("section.screen")) s.classList.toggle("hidden", s.id !== "s-" + id); };
+  const save = () => G && QZ.store.set(SAVE, G);
+  const list = () => Object.values(G.players);
+  const ansOf = (p, i) => p.ans[i];
+  const statsOf = (p) => {
+    let ok = 0, tAll = 0, nAll = 0, tOk = 0;
+    for (const k in p.ans) { const a = p.ans[k]; nAll++; tAll += a.ms; if (a.ok) { ok++; tOk += a.ms; } }
+    return { ok, n: nAll, avg: nAll ? tAll / nAll : Infinity, tOk };
+  };
+  function ranked() {
+    return list().sort((a, b) => b.score - a.score || statsOf(a).tOk - statsOf(b).tOk || a.joinedAt - b.joinedAt);
+  }
+  const sec = (ms) => (ms / 1000).toFixed(2) + " วิ";
+  const joinUrl = () => {
+    const u = new URL("./", location.href);
+    u.searchParams.set("pin", G.pin);
+    if (QZ.brokerParam) u.searchParams.set("broker", QZ.brokerParam);
+    return u.href;
+  };
+  const shortUrl = () => new URL("./", location.href).href.replace(/^https?:\/\//, "");
+
+  /* ---------- เสียง ---------- */
+  const musicOn = () => $("chkMusic").checked;
+  const music = (n) => (musicOn() ? A.music(n) : A.stopMusic());
+  $("btnMute").onclick = () => { A.setMuted(!A.muted); $("btnMute").textContent = A.muted ? "🔇" : "🔊"; };
+  $("btnFull").onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.());
+
+  /* ---------- เครือข่าย ---------- */
+  function setNet(n, total) {
+    const el = $("net");
+    el.className = "net tag " + (n ? "ok" : "bad");
+    el.lastChild.textContent = n ? `ออนไลน์ (${n}/${total})` : "กำลังเชื่อมต่อ…";
+  }
+  async function openNet(pin) {
+    const nt = new QZ.Net(pin, (sub, m) => onMsg(nt, sub, m));
+    nt.onStatus = setNet;
+    await nt.start();
+    return nt;
+  }
+  async function findFreePin() {
+    for (let tries = 0; tries < 8; tries++) {
+      const pin = String(1000 + Math.floor(Math.random() * 9000));
+      const nt = await openNet(pin);
+      if (!(await nt.waitConnected(15000))) { nt.stop(); throw new Error("offline"); }
+      nt.probe = null;
+      nt.subscribe("state");
+      await new Promise((r) => setTimeout(r, 1800));
+      const busy = nt.probe && nt.probe.phase !== "closed" && Date.now() - nt.probe.ts < 6 * 3600e3;
+      if (!busy) return nt;
+      nt.stop();
+    }
+    throw new Error("busy");
+  }
+
+  function onMsg(nt, sub, m) {
+    if (sub === "state") { if (m && (!G || m.roomId !== G.roomId)) nt.probe = m; return; }
+    if (nt !== net || !G || sub !== "up" || !m || m.roomId !== G.roomId) return;
+    const pid = String(m.pid || "").slice(0, 24);
+    if (!pid) return;
+    if (G.kicked[pid]) return sendKicked(pid);
+    if (m.t === "join") {
+      const nick = String(m.nick || "").trim().slice(0, 16), name = String(m.name || "").trim().slice(0, 80);
+      if (!nick || !name) return;
+      const isNew = !G.players[pid];
+      const p = G.players[pid] || (G.players[pid] = { pid, score: 0, streak: 0, ans: {}, joinedAt: Date.now() });
+      Object.assign(p, { nick, name, av: Math.max(0, Math.min(QZ.AVATARS.length - 1, m.av | 0)) });
+      if (isNew) A.sfx("join");
+      save(); sendPlayer(p); renderPlayers();
+    } else if (m.t === "hello") {
+      if (G.players[pid]) sendPlayer(G.players[pid]);
+      else net.publish("p/" + pid, { t: "unknown", roomId: G.roomId }, true);
+    } else if (m.t === "ans") {
+      const p = G.players[pid];
+      if (!p || G.phase !== "question" || m.q !== G.qi || p.ans[G.qi]) return;
+      const ms = Math.min(G.dur, Math.max(0, Date.now() - G.qStart));
+      const a = !!m.a, ok = a === Q[G.qi].answer;
+      const streak = ok ? p.streak + 1 : 0;
+      const pts = ok ? QZ.points(ms, G.dur, streak) : 0;
+      p.ans[G.qi] = { a, ms, ok, pts };
+      p.streak = streak; p.score += pts;
+      save(); sendPlayer(p); renderAnswered();
+      if (list().every((x) => x.ans[G.qi])) endQuestion();
+    }
+  }
+
+  function sendPlayer(p) {
+    const rk = ranked();
+    const me = {
+      t: "me", roomId: G.roomId, pid: p.pid, nick: p.nick, av: p.av, phase: G.phase, qi: G.qi,
+      score: p.score, rank: rk.indexOf(p) + 1, of: rk.length, streak: p.streak, answered: !!p.ans[G.qi],
+    };
+    if (["reveal", "board", "end"].includes(G.phase) && G.qi >= 0) {
+      const a = p.ans[G.qi];
+      me.last = a ? { a: a.a, ok: a.ok, pts: a.pts } : null;
+      me.correct = Q[G.qi].answer;
+    }
+    if (G.phase === "end") me.stats = statsOf(p);
+    net.publish("p/" + p.pid, me, true);
+  }
+  const sendAll = () => list().forEach(sendPlayer);
+  const sendKicked = (pid) => net.publish("p/" + pid, { t: "kicked", roomId: G.roomId }, true);
+  function publishState() {
+    const st = { t: "state", roomId: G.roomId, title: QUIZ.title, phase: G.phase, qi: G.qi, total: Q.length, ts: Date.now(), dur: G.dur, endAt: G.endAt };
+    if (G.qi >= 0 && G.phase !== "lobby") st.text = Q[G.qi].text;
+    if (["reveal", "board", "end"].includes(G.phase)) st.answer = Q[G.qi].answer;
+    net.publish("state", st, true);
+  }
+
+  /* ---------- ขั้นตอนของเกม ---------- */
+  async function createRoom() {
+    A.unlock();
+    $("btnCreate").disabled = true;
+    $("setupMsg").classList.remove("hidden");
+    $("setupMsg").textContent = "กำลังสร้างห้อง…";
+    try {
+      net = await findFreePin();
+    } catch (e) {
+      $("btnCreate").disabled = false;
+      $("setupMsg").textContent = e.message === "offline"
+        ? "เชื่อมต่อเซิร์ฟเวอร์เกมไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่" : "สุ่ม PIN ไม่สำเร็จ ลองใหม่อีกครั้ง";
+      return;
+    }
+    G = { roomId: QZ.rid(10), pin: net.pin, phase: "lobby", qi: -1, dur: +$("selTime").value * 1000, players: {}, kicked: {}, qStart: 0, endAt: 0, createdAt: Date.now() };
+    net.subscribe("up");
+    $("setupMsg").classList.add("hidden");
+    $("btnCreate").disabled = false;
+    goLobby();
+    startBeat();
+  }
+  function startBeat() { clearInterval(beatInt); beatInt = setInterval(() => G && net && publishState(), 20000); }
+
+  async function resume() {
+    A.unlock();
+    G = QZ.store.get(SAVE);
+    net = await openNet(G.pin);
+    net.subscribe("up");
+    $("dlg").open && $("dlg").close();
+    startBeat();
+    if (G.phase === "lobby") goLobby();
+    else if (G.phase === "ready" || G.phase === "question") endQuestion();
+    else if (G.phase === "reveal") { G.phase = "question"; endQuestion(); }
+    else if (G.phase === "board") goBoard();
+    else goEnd();
+    sendAll();
+  }
+
+  function goLobby() {
+    G.phase = "lobby"; save(); publishState();
+    $("pin").textContent = $("qPin").textContent = G.pin;
+    $("joinUrl").textContent = shortUrl();
+    const qr = qrcode(0, "M");
+    qr.addData(joinUrl()); qr.make();
+    $("qr").innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true, alt: "QR เข้าเกม" });
+    renderPlayers();
+    show("lobby"); music("lobby");
+  }
+  function renderPlayers() {
+    if (!G || G.phase !== "lobby") return;
+    const ps = list().sort((a, b) => a.joinedAt - b.joinedAt);
+    $("nPlayers").textContent = ps.length;
+    $("btnStart").disabled = !ps.length;
+    $("players").innerHTML = ps.length
+      ? ps.map((p) => `<button class="pl" data-pid="${esc(p.pid)}" title="แตะเพื่อนำออก">${QZ.avatarHTML(p.av, 42)}${esc(p.nick)}</button>`).join("")
+      : `<p style="opacity:.8;font-size:1.3rem">รอผู้เล่นเข้าห้อง…</p>`;
+  }
+  $("players").onclick = (e) => {
+    const b = e.target.closest(".pl");
+    if (!b) return;
+    const p = G.players[b.dataset.pid];
+    if (p && confirm(`นำ "${p.nick}" ออกจากห้อง?`)) {
+      delete G.players[p.pid]; G.kicked[p.pid] = 1; save(); sendKicked(p.pid); renderPlayers();
+    }
+  };
+
+  function startQuestion(i) {
+    clearInterval(tickInt); clearTimeout(readyTO);
+    G.qi = i; G.phase = "ready"; G.endAt = 0; save(); publishState(); sendAll();
+    $("rNum").textContent = `ข้อที่ ${i + 1} / ${Q.length}`;
+    $("rText").textContent = Q[i].text;
+    show("ready"); A.stopMusic(); A.sfx("start");
+    let n = 3;
+    $("rCount").textContent = n;
+    const step = () => {
+      n--;
+      if (n > 0) { $("rCount").textContent = n; A.sfx("tick"); readyTO = setTimeout(step, 1000); }
+      else openAnswers();
+    };
+    readyTO = setTimeout(step, 1000);
+  }
+  function openAnswers() {
+    G.phase = "question"; G.qStart = Date.now(); G.endAt = G.qStart + G.dur;
+    save(); publishState(); sendAll();
+    $("qNum").textContent = `ข้อที่ ${G.qi + 1} / ${Q.length}`;
+    $("qText").textContent = Q[G.qi].text;
+    for (const id of ["optT", "optF"]) $(id).classList.remove("dim", "win");
+    $("cT").classList.add("hidden"); $("cF").classList.add("hidden");
+    $("revealBox").classList.add("hidden");
+    $("btnNext").classList.add("hidden"); $("btnSkip").classList.remove("hidden");
+    $("timer").classList.remove("low");
+    renderAnswered();
+    show("question"); music("question");
+    lastTick = -1;
+    tickInt = setInterval(tick, 100); tick();
+  }
+  function tick() {
+    const left = Math.max(0, G.endAt - Date.now()), s = Math.ceil(left / 1000);
+    $("tNum").textContent = s;
+    $("timer").style.setProperty("--p", (left / G.dur) * 100 + "%");
+    $("timer").classList.toggle("low", s <= 5);
+    if (s <= 5 && s > 0 && s !== lastTick) { lastTick = s; A.sfx("tick"); }
+    if (left <= 0) endQuestion();
+  }
+  const renderAnswered = () => { $("nAns").textContent = G.qi >= 0 ? list().filter((p) => p.ans[G.qi]).length : 0; };
+
+  function endQuestion() {
+    clearInterval(tickInt); clearTimeout(readyTO);
+    if (G.phase !== "question" && G.phase !== "ready") return;
+    const q = Q[G.qi], ps = list();
+    for (const p of ps) if (!p.ans[G.qi]) p.streak = 0;
+    G.phase = "reveal"; save(); publishState(); sendAll();
+    A.stopMusic(); A.sfx("timeup"); setTimeout(() => A.sfx("reveal"), 700);
+    $("qNum").textContent = `ข้อที่ ${G.qi + 1} / ${Q.length}`;
+    $("qText").textContent = q.text;
+    $("tNum").textContent = "0"; $("timer").style.setProperty("--p", "0%"); $("timer").classList.remove("low");
+    const nT = ps.filter((p) => p.ans[G.qi]?.a === true).length, nF = ps.filter((p) => p.ans[G.qi]?.a === false).length;
+    $("cT").textContent = nT; $("cF").textContent = nF;
+    $("cT").classList.remove("hidden"); $("cF").classList.remove("hidden");
+    $("optT").classList.toggle("dim", !q.answer); $("optT").classList.toggle("win", q.answer);
+    $("optF").classList.toggle("dim", q.answer); $("optF").classList.toggle("win", !q.answer);
+    $("nAns").textContent = nT + nF;
+    $("ansLabel").textContent = "เฉลย: " + (q.answer ? "ถูกต้อง ✔" : "ไม่ถูกต้อง ✘");
+    $("explain").textContent = q.explain || "";
+    const fast = ps.filter((p) => p.ans[G.qi]?.ok).sort((a, b) => a.ans[G.qi].ms - b.ans[G.qi].ms).slice(0, 3);
+    $("fastBox").innerHTML = fast.length
+      ? `<div class="muted" style="margin-top:12px;font-size:1rem">⚡ ตอบถูกเร็วที่สุด</div><div class="fast">${fast.map((p, i) =>
+          `<span class="pl" style="background:var(--line);color:var(--ink)">${["🥇","🥈","🥉"][i]} ${QZ.avatarHTML(p.av, 34)}${esc(p.nick)} · ${sec(p.ans[G.qi].ms)}</span>`).join("")}</div>`
+      : "";
+    $("revealBox").classList.remove("hidden");
+    $("btnSkip").classList.add("hidden"); $("btnNext").classList.remove("hidden");
+    $("btnNext").textContent = G.qi === Q.length - 1 ? "ดูผู้ชนะ 🏆" : "กระดานคะแนน ▶";
+    show("question");
+  }
+
+  function goBoard() {
+    G.phase = "board"; save(); publishState(); sendAll();
+    const rk = ranked().slice(0, 5);
+    $("board").innerHTML = rk.length ? rk.map((p, i) => {
+      const a = p.ans[G.qi];
+      return `<div class="brow" style="animation-delay:${i * 0.12}s"><span class="rk">${i + 1}</span>${QZ.avatarHTML(p.av, 46)}<span class="nm">${esc(p.nick)}${p.streak >= 2 ? ` <span title="ตอบถูกติดกัน">🔥${p.streak}</span>` : ""}</span>${a?.pts ? `<span class="up">+${a.pts}</span>` : ""}<span class="sc">${p.score.toLocaleString()}</span></div>`;
+    }).join("") : `<p class="center">ยังไม่มีผู้เล่น</p>`;
+    $("btnNextQ").textContent = `ข้อถัดไป (${G.qi + 2}/${Q.length}) ▶`;
+    show("board"); music("board");
+  }
+
+  function goEnd() {
+    clearInterval(tickInt);
+    G.phase = "end"; save(); publishState(); sendAll();
+    const rk = ranked();
+    const slot = (p, cls, n) => p ? `<div class="pod ${cls}">${QZ.avatarHTML(p.av, 86)}<div class="nm">${esc(p.nick)}</div><div class="sc">${p.score.toLocaleString()} คะแนน</div><div class="blk">${n}</div></div>` : `<div class="pod ${cls}" style="visibility:hidden"><div class="blk">${n}</div></div>`;
+    $("podium").innerHTML = slot(rk[1], "p2", 2) + slot(rk[0], "p1", 1) + slot(rk[2], "p3", 3);
+    show("end");
+    A.stopMusic(); A.sfx("drumroll");
+    setTimeout(() => { A.sfx("fanfare"); QZ.confetti(160); }, 1600);
+    setTimeout(() => music("end"), 3200);
+  }
+
+  async function closeRoom() {
+    if (!confirm("ปิดห้องนี้? (ดาวน์โหลดผลคะแนนเก็บไว้ก่อนได้ที่ปุ่ม 📋)")) return;
+    clearInterval(beatInt); clearInterval(tickInt);
+    if (net && G) {
+      await net.publish("state", { t: "state", roomId: G.roomId, phase: "closed", ts: Date.now() }, true);
+      setTimeout(() => { net.clear("state"); for (const pid of [...Object.keys(G.players), ...Object.keys(G.kicked)]) net.clear("p/" + pid); }, 1500);
+      const old = net; setTimeout(() => old.stop(), 4000);
+    }
+    QZ.store.del(SAVE);
+    G = null; net = null;
+    A.stopMusic(); setNet(0, 0); $("net").lastChild.textContent = "ยังไม่เชื่อมต่อ";
+    $("resumeBox").classList.add("hidden");
+    show("setup");
+  }
+
+  /* ---------- ผลคะแนนสำหรับครู ---------- */
+  function fastestPerQ() {
+    return Q.map((q, i) => {
+      const ps = list().filter((p) => p.ans[i]);
+      const ok = ps.filter((p) => p.ans[i].ok).sort((a, b) => a.ans[i].ms - b.ans[i].ms);
+      return { i, p: ok[0], nOk: ok.length, n: ps.length };
+    });
+  }
+  function rowsSorted() {
+    const r = ranked();
+    const rankOf = new Map(r.map((p, i) => [p, i + 1]));
+    const fq = fastestPerQ();
+    const nFast = (p) => fq.filter((f) => f.p === p).length;
+    let ps = r;
+    if (sortBy === "speed") ps = [...r].sort((a, b) => statsOf(a).avg - statsOf(b).avg || b.score - a.score);
+    return ps.map((p, i) => ({ p, no: sortBy === "speed" ? i + 1 : rankOf.get(p), st: statsOf(p), nFast: nFast(p) }));
+  }
+  function renderResults() {
+    if (!G) { $("resBody").innerHTML = `<tr><td colspan="7">ยังไม่มีเกม</td></tr>`; $("fastBody").innerHTML = ""; return; }
+    const rows = rowsSorted();
+    $("resBody").innerHTML = rows.length ? rows.map(({ p, no, st, nFast }) =>
+      `<tr><td class="num">${no}</td><td>${esc(p.name)}</td><td>${QZ.avatarHTML(p.av, 24)} ${esc(p.nick)}</td><td class="num"><b>${p.score.toLocaleString()}</b></td><td class="num">${st.ok}/${Q.length}</td><td class="num">${st.n ? sec(st.avg) : "-"}</td><td class="num">${nFast || "-"}</td></tr>`).join("")
+      : `<tr><td colspan="7">ยังไม่มีผู้เล่น</td></tr>`;
+    $("fastBody").innerHTML = fastestPerQ().filter((f) => f.n || f.i <= G.qi).map((f) =>
+      `<tr><td>${f.i + 1}</td><td>${f.p ? esc(f.p.name) : "-"}</td><td>${f.p ? esc(f.p.nick) : "-"}</td><td class="num">${f.p ? sec(f.p.ans[f.i].ms) : "-"}</td><td class="num">${f.nOk} / ${f.n}</td></tr>`).join("");
+  }
+  function downloadCsv() {
+    if (!G) return;
+    const cell = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const head = ["อันดับ", "ชื่อ-นามสกุล", "ชื่อเล่น", "คะแนนรวม", "ตอบถูก (ข้อ)", "เวลาตอบเฉลี่ย (วินาที)", "ตอบถูกเร็วสุด (ข้อ)"];
+    Q.forEach((_, i) => head.push(`ข้อ ${i + 1} คำตอบ`, `ข้อ ${i + 1} ผล`, `ข้อ ${i + 1} เวลา (วินาที)`, `ข้อ ${i + 1} คะแนน`));
+    const lines = [head];
+    for (const { p, no, st, nFast } of rowsSorted()) {
+      const row = [no, p.name, p.nick, p.score, st.ok, st.n ? (st.avg / 1000).toFixed(2) : "", nFast];
+      Q.forEach((_, i) => { const a = p.ans[i]; row.push(a ? (a.a ? "ถูกต้อง" : "ไม่ถูกต้อง") : "ไม่ได้ตอบ", a ? (a.ok ? "✔" : "✘") : "", a ? (a.ms / 1000).toFixed(2) : "", a ? a.pts : 0); });
+      lines.push(row);
+    }
+    const blob = new Blob(["﻿" + lines.map((r) => r.map(cell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    const d = new Date(), pad = (n) => String(n).padStart(2, "0");
+    a.href = URL.createObjectURL(blob);
+    a.download = `quiz-results_PIN${G.pin}_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  const openResults = () => { renderResults(); $("dlg").showModal(); };
+  $("btnResults").onclick = $("btnShowRes").onclick = openResults;
+  $("btnDlgClose").onclick = () => $("dlg").close();
+  $("btnCsv").onclick = downloadCsv;
+  $("sortSeg").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    sortBy = b.dataset.s;
+    for (const x of $("sortSeg").children) x.classList.toggle("on", x === b);
+    renderResults();
+  };
+
+  /* ---------- ปุ่ม ---------- */
+  $("btnCreate").onclick = createRoom;
+  $("btnResume").onclick = resume;
+  $("btnStart").onclick = () => startQuestion(0);
+  $("btnSkip").onclick = () => endQuestion();
+  $("btnNext").onclick = () => (G.qi === Q.length - 1 ? goEnd() : goBoard());
+  $("btnNextQ").onclick = () => startQuestion(G.qi + 1);
+  $("btnClose").onclick = closeRoom;
+  $("chkMusic").onchange = () => { if (!musicOn()) A.stopMusic(); };
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " " && e.key !== "ArrowRight") return;
+    if ($("dlg").open || e.target.tagName === "BUTTON" || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+    const vis = [...document.querySelectorAll("section.screen:not(.hidden) .btn.big:not(.hidden):not(:disabled), section.screen:not(.hidden) #btnSkip:not(.hidden)")];
+    if (vis[0]) { e.preventDefault(); vis[vis.length - 1].click(); }
+  });
+  window.addEventListener("beforeunload", (e) => { if (G && G.phase !== "lobby" && G.phase !== "end") { e.preventDefault(); e.returnValue = ""; } });
+
+  const saved = QZ.store.get(SAVE);
+  if (saved && saved.pin && Date.now() - saved.createdAt < 6 * 3600e3) {
+    $("resumePin").textContent = saved.pin;
+    $("resumeBox").classList.remove("hidden");
+  }
+  show("setup");
+})();
+</script>
+</body>
+</html>
