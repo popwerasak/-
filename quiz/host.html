@@ -286,11 +286,12 @@ td.num,th.num{text-align:right}
     if (!pid) return;
     if (G.kicked[pid]) return sendKicked(pid);
     if (m.t === "join") {
-      const nick = String(m.nick || "").trim().slice(0, 16), name = String(m.name || "").trim().slice(0, 80);
+      const nick = String(m.nick || "").trim().slice(0, 16), name = String(m.name || "").trim().slice(0, 120);
+      const title = String(m.title || "").trim().slice(0, 40), plain = String(m.plain || "").trim().slice(0, 80);
       if (!nick || !name) return;
       const isNew = !G.players[pid];
       const p = G.players[pid] || (G.players[pid] = { pid, score: 0, streak: 0, ans: {}, joinedAt: Date.now() });
-      Object.assign(p, { nick, name, av: Math.max(0, Math.min(QZ.AVATARS.length - 1, m.av | 0)) });
+      Object.assign(p, { nick, name, title, plain, av: Math.max(0, Math.min(QZ.AVATARS.length - 1, m.av | 0)) });
       if (isNew) A.sfx("join");
       save(); sendPlayer(p); renderPlayers();
     } else if (m.t === "hello") {
@@ -535,11 +536,11 @@ td.num,th.num{text-align:right}
   function downloadCsv() {
     if (!G) return;
     const cell = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const head = ["อันดับ", "ชื่อ-นามสกุล", "ชื่อเล่น", "คะแนนรวม", "ตอบถูก (ข้อ)", "เวลาตอบเฉลี่ย (วินาที)", "ตอบถูกเร็วสุด (ข้อ)"];
+    const head = ["อันดับ", "ชื่อ-นามสกุล (สำหรับเกียรติบัตร)", "คำนำหน้า", "ชื่อ-นามสกุล (ไม่มีคำนำหน้า)", "ชื่อเล่น", "คะแนนรวม", "ตอบถูก (ข้อ)", "เวลาตอบเฉลี่ย (วินาที)", "ตอบถูกเร็วสุด (ข้อ)"];
     Q.forEach((_, i) => head.push(`ข้อ ${i + 1} คำตอบ`, `ข้อ ${i + 1} ผล`, `ข้อ ${i + 1} เวลา (วินาที)`, `ข้อ ${i + 1} คะแนน`));
     const lines = [head];
     for (const { p, no, st, nFast } of rowsSorted()) {
-      const row = [no, p.name, p.nick, p.score, st.ok, st.n ? (st.avg / 1000).toFixed(2) : "", nFast];
+      const row = [no, p.name, p.title || "", p.plain || "", p.nick, p.score, st.ok, st.n ? (st.avg / 1000).toFixed(2) : "", nFast];
       Q.forEach((_, i) => { const a = p.ans[i]; row.push(a ? (a.a ? "ถูกต้อง" : "ไม่ถูกต้อง") : "ไม่ได้ตอบ", a ? (a.ok ? "✔" : "✘") : "", a ? (a.ms / 1000).toFixed(2) : "", a ? a.pts : 0); });
       lines.push(row);
     }
