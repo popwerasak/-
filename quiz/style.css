@@ -1,0 +1,62 @@
+:root{
+  --bg1:#ff4d8d; --bg2:#7b2ff7;
+  --ink:#1d1730; --muted:#6b6385; --card:#ffffff; --line:#ece6f5;
+  --true:#1f9d55; --true-d:#167a41;
+  --false:#e5383b; --false-d:#b72a2d;
+  --gold:#ffc83d; --silver:#cfd6e4; --bronze:#e59866;
+  --pill:rgba(255,255,255,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --ink:#f3effa; --muted:#b4abc9; --card:#211a33; --line:#352b4d; --bg1:#c2185b; --bg2:#4a148c; }
+}
+:root[data-theme="dark"]{ --ink:#f3effa; --muted:#b4abc9; --card:#211a33; --line:#352b4d; --bg1:#c2185b; --bg2:#4a148c; }
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:"Kanit","Sarabun",system-ui,sans-serif;color:#fff;
+  background:#5b1f9e linear-gradient(135deg,var(--bg1),var(--bg2)) fixed;
+  min-height:100vh;min-height:100dvh;-webkit-tap-highlight-color:transparent;
+}
+body::before{ /* ริบบิ้นชมพูจาง ๆ เป็นลายพื้นหลัง */
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.07;
+  background-image:radial-gradient(circle at 20% 20%,#fff 0 60px,transparent 61px),radial-gradient(circle at 80% 70%,#fff 0 110px,transparent 111px),radial-gradient(circle at 60% 10%,#fff 0 30px,transparent 31px);
+}
+button,input{font:inherit}
+button{cursor:pointer;border:0}
+.hidden{display:none!important}
+.wrap{position:relative;max-width:1180px;margin:0 auto;padding:16px}
+.card{background:var(--card);color:var(--ink);border-radius:20px;padding:22px;box-shadow:0 12px 40px rgba(30,0,60,.25)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 26px;border-radius:14px;font-weight:600;font-size:1.1rem;
+  background:#2b1d4a;color:#fff;box-shadow:0 5px 0 rgba(0,0,0,.35);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.btn.pink{background:#ff2e7e}
+.btn.green{background:var(--true)}
+.btn.light{background:#fff;color:#2b1d4a}
+.btn.ghost{background:var(--pill);box-shadow:none}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.big{font-size:1.4rem;padding:18px 34px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.4rem;letter-spacing:.3px}
+.logo .rib{font-size:1.8rem}
+.av{display:inline-grid;place-items:center;width:var(--s);height:var(--s);border-radius:50%;font-size:calc(var(--s)*.58);line-height:1;flex:none;box-shadow:inset 0 -4px 0 rgba(0,0,0,.15)}
+.muted{color:var(--muted)}
+.tag{display:inline-block;padding:4px 12px;border-radius:999px;background:var(--pill);font-weight:600}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.icon-btn{width:46px;height:46px;border-radius:50%;background:var(--pill);color:#fff;font-size:1.3rem;display:grid;place-items:center}
+
+/* ปุ่มคำตอบ */
+.opt{display:flex;align-items:center;gap:14px;border-radius:16px;color:#fff;font-weight:700;padding:18px 22px;box-shadow:0 6px 0 rgba(0,0,0,.25)}
+.opt .shape{font-size:1.6em;width:1.6em;text-align:center}
+.opt.t{background:var(--true)}
+.opt.f{background:var(--false)}
+.opt.dim{opacity:.28;filter:grayscale(.6)}
+.opt.win{outline:5px solid #fff;outline-offset:-5px}
+
+/* พลุกระดาษ */
+.confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50}
+.confetti i{position:absolute;top:-20px;width:10px;height:16px;border-radius:2px;animation:fall linear forwards}
+@keyframes fall{to{top:110vh;transform:rotate(720deg) translateX(60px)}}
+@keyframes pop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+@keyframes bob{50%{transform:translateY(-6px)}}
+@keyframes pulse{50%{transform:scale(1.06)}}
+.pop{animation:pop .4s ease-out both}
+@media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important} }
