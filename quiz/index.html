@@ -25,6 +25,19 @@ h2{margin:.2em 0 .5em}
 .avs{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:8px;max-height:230px;overflow:auto;padding:4px}
 .avs button{background:transparent;border-radius:50%;padding:3px;border:3px solid transparent;display:grid;place-items:center}
 .avs button[aria-pressed="true"]{border-color:#ff2e7e;transform:scale(1.08)}
+.cert{border:2px dashed #ff2e7e;border-radius:16px;padding:14px;margin:16px 0;background:rgba(255,46,126,.06)}
+.cert-note{font-size:1.02rem;line-height:1.5;color:#c2185b;margin-bottom:4px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .cert-note{color:#ff8fb8}}
+:root[data-theme="dark"] .cert-note{color:#ff8fb8}
+.req{color:var(--false)}
+.titles{display:flex;flex-wrap:wrap;gap:8px}
+.titles button{padding:10px 16px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);font-weight:600;font-size:1.05rem}
+.titles button[aria-checked="true"]{background:#ff2e7e;border-color:#ff2e7e;color:#fff}
+.bad,.titles.bad button{border-color:var(--false)!important}
+.bad{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.preview{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:10px 14px;font-size:.95rem;color:var(--muted)}
+.preview b{display:block;color:var(--ink);font-size:1.25rem;margin-top:2px;word-break:break-word}
 .err{color:var(--false);font-weight:600;min-height:1.4em;margin:8px 0 0}
 .me-bar{display:flex;align-items:center;gap:10px;justify-content:space-between}
 .me-bar .who{display:flex;align-items:center;gap:8px;font-weight:600;min-width:0}
@@ -82,8 +95,23 @@ h2{margin:.2em 0 .5em}
         <label class="field"><span>ชื่อเล่น <small class="muted">(แสดงบนจอ)</small></span>
           <input class="inp" id="inNick" maxlength="16" placeholder="เช่น มิ้นท์" required></label>
         <div class="field"><span>Avatar ที่ชอบ</span><div class="avs" id="avs" role="group" aria-label="เลือก Avatar"></div></div>
-        <label class="field"><span>ชื่อ-นามสกุลจริง <small class="muted">(ไม่แสดงบนจอ ใช้บันทึกผลคะแนนเท่านั้น)</small></span>
-          <input class="inp" id="inName" maxlength="80" placeholder="ชื่อ นามสกุล" autocomplete="name" required></label>
+        <div class="cert">
+          <div class="cert-note">📜 <b>เพื่อความถูกต้องในการจัดทำเกียรติบัตรการอบรมของคุณ</b> กรุณาระบุข้อมูลดังต่อไปนี้ :</div>
+          <div class="field"><span>คำนำหน้านาม <b class="req">*</b></span>
+            <div class="titles" id="titles" role="radiogroup" aria-label="คำนำหน้านาม">
+              <button type="button" role="radio" aria-checked="false" data-t="นาย">นาย</button>
+              <button type="button" role="radio" aria-checked="false" data-t="นาง">นาง</button>
+              <button type="button" role="radio" aria-checked="false" data-t="นางสาว">นางสาว</button>
+              <button type="button" role="radio" aria-checked="false" data-t="ดร.">ดร.</button>
+              <button type="button" role="radio" aria-checked="false" data-t="">อื่น ๆ</button>
+            </div>
+            <input class="inp hidden" id="inTitleOther" maxlength="40" placeholder="ระบุคำนำหน้า เช่น ผศ.ดร. / พญ. / ว่าที่ร้อยตรี" style="margin-top:8px">
+          </div>
+          <label class="field" style="margin-bottom:8px"><span>ชื่อ-นามสกุล <b class="req">*</b> <small class="muted">(ไม่ต้องพิมพ์คำนำหน้าซ้ำ)</small></span>
+            <input class="inp" id="inName" maxlength="80" placeholder="เช่น สมหญิง ใจดี" autocomplete="name" required></label>
+          <div class="preview">ชื่อที่จะพิมพ์บนเกียรติบัตร<b id="certName">—</b></div>
+          <small class="muted" style="display:block;margin-top:8px">🔒 ไม่แสดงบนจอ ใช้สำหรับบันทึกผลคะแนนและจัดทำเกียรติบัตรเท่านั้น</small>
+        </div>
         <button class="btn pink big" style="width:100%">พร้อมแล้ว! 🚀</button>
         <p class="err" id="profErr"></p>
       </form>
@@ -185,23 +213,68 @@ h2{margin:.2em 0 .5em}
   function openProfile(prev) {
     prof = null; me = null;
     $("meBar").classList.add("hidden");
-    if (prev) { $("inNick").value = prev.nick || ""; $("inName").value = prev.name || ""; av = prev.av ?? av; }
-    renderAvs(); show("prof");
+    if (prev) {
+      $("inNick").value = prev.nick || ""; av = prev.av ?? av;
+      $("inName").value = prev.plain || "";
+      if (prev.title) setTitle(["นาย", "นาง", "นางสาว", "ดร."].includes(prev.title) ? prev.title : "", prev.title);
+    }
+    renderAvs(); show("prof"); updatePreview();
   }
+
+  /* ---------- คำนำหน้า + ชื่อสำหรับเกียรติบัตร ---------- */
+  let titleSel = null; // null = ยังไม่เลือก, "" = อื่น ๆ
+  function setTitle(t, other = "") {
+    titleSel = t;
+    for (const b of $("titles").children) b.setAttribute("aria-checked", b.dataset.t === t);
+    $("inTitleOther").classList.toggle("hidden", t !== "");
+    if (t === "") { if (other) $("inTitleOther").value = other; }
+    $("titles").classList.remove("bad");
+    $("profErr").textContent = "";
+    updatePreview();
+  }
+  $("titles").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    A.sfx("tap"); setTitle(b.dataset.t);
+    if (b.dataset.t === "") $("inTitleOther").focus();
+  };
+  const curTitle = () => (titleSel === "" ? $("inTitleOther").value.trim().replace(/\s+/g, " ") : titleSel || "");
+  // ตัดคำนำหน้าที่พิมพ์ซ้ำในช่องชื่อออก (เฉพาะกรณีมีเว้นวรรคตามหลัง หรือเป็นแบบย่อมีจุด)
+  const cleanName = (s) => s.trim().replace(/\s+/g, " ")
+    .replace(/^(นางสาว|นาง|นาย|เด็กชาย|เด็กหญิง)\s+/, "")
+    .replace(/^(น\.ส\.|ด\.ช\.|ด\.ญ\.|ดร\.)\s*/, "");
+  const fullName = () => { const t = curTitle(), n = cleanName($("inName").value); return t && n ? t + n : ""; };
+  function updatePreview() { $("certName").textContent = fullName() || "—"; }
+  $("inName").oninput = $("inTitleOther").oninput = () => { $("inName").classList.remove("bad"); $("inTitleOther").classList.remove("bad"); $("profErr").textContent = ""; updatePreview(); };
+  function bad(el, msg) {
+    $("profErr").textContent = msg;
+    el.classList.remove("bad"); void el.offsetWidth; el.classList.add("bad");
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (el.focus && el.tagName === "INPUT") el.focus({ preventScroll: true });
+    A.sfx("wrong"); buzz(120);
+  }
+
   $("fProf").onsubmit = (e) => {
     e.preventDefault();
-    const nick = $("inNick").value.trim(), name = $("inName").value.trim();
-    if (!nick) return ($("profErr").textContent = "กรุณาตั้งชื่อเล่น");
-    if (name.length < 3) return ($("profErr").textContent = "กรุณากรอกชื่อ-นามสกุลจริง");
+    const nick = $("inNick").value.trim();
+    if (!nick) return bad($("inNick"), "กรุณาตั้งชื่อเล่น");
+    if (titleSel === null) return bad($("titles"), "กรุณาเลือกคำนำหน้านาม (นาย / นาง / นางสาว / ดร. หรือ อื่น ๆ)");
+    const title = curTitle();
+    if (!title) return bad($("inTitleOther"), "กรุณาระบุคำนำหน้านาม");
+    const plain = cleanName($("inName").value);
+    const parts = plain.split(" ").filter(Boolean);
+    if (!plain) return bad($("inName"), "กรุณากรอกชื่อ-นามสกุล");
+    if (/[0-9๐-๙@#$%^&*_=+<>{}\[\]|\\/]/.test(plain)) return bad($("inName"), "ชื่อ-นามสกุลต้องไม่มีตัวเลขหรือสัญลักษณ์");
+    if (parts.length < 2 || parts.some((w) => w.length < 2)) return bad($("inName"), "กรุณากรอกทั้งชื่อและนามสกุล โดยเว้นวรรค 1 ครั้งระหว่างชื่อกับนามสกุล");
     $("profErr").textContent = "";
-    prof = { roomId: state.roomId, pid: QZ.rid(12), nick, name, av, answered: {} };
+    const name = title + plain;
+    prof = { roomId: state.roomId, pid: QZ.rid(12), nick, name, title, plain, av, answered: {} };
     QZ.store.set(keyOf(pin), prof);
     A.sfx("join");
     join();
   };
   function join() {
     net.subscribe("p/" + prof.pid);
-    const send = () => net.publish("up", { t: "join", roomId: prof.roomId, pid: prof.pid, nick: prof.nick, name: prof.name, av: prof.av });
+    const send = () => net.publish("up", { t: "join", roomId: prof.roomId, pid: prof.pid, nick: prof.nick, name: prof.name, title: prof.title, plain: prof.plain, av: prof.av });
     send();
     show("load"); $("loadMsg").textContent = "กำลังเข้าห้อง…";
     clearInterval(joinTO);
