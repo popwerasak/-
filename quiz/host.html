@@ -93,6 +93,7 @@ td.num,th.num{text-align:right}
     <div class="logo"><span class="rib">🎗️</span><span id="ttl">รู้ทันมะเร็งเต้านม</span></div>
     <div class="row" style="margin:0">
       <span class="net tag" id="net"><i></i>ยังไม่เชื่อมต่อ</span>
+      <button class="icon-btn" id="btnHistory" title="ประวัติเกมที่เคยเล่น">🗂️</button>
       <button class="icon-btn" id="btnResults" title="ผลคะแนน (สำหรับครู)">📋</button>
       <button class="icon-btn" id="btnMute" title="เปิด/ปิดเสียง">🔊</button>
       <button class="icon-btn" id="btnFull" title="เต็มจอ">⛶</button>
@@ -117,6 +118,7 @@ td.num,th.num{text-align:right}
         <p class="muted" style="margin:6px 0 14px" id="qInfo"></p>
         <button class="btn pink big" id="btnCreate" style="width:100%">🎮 สร้างห้องเกม</button>
         <p class="muted hidden" id="setupMsg" style="margin:12px 0 0"></p>
+        <button class="btn" id="btnHistory2" style="width:100%;margin-top:10px">🗂️ ประวัติเกมที่เคยเล่น (<span id="nHist">0</span>)</button>
       </div>
     </div>
   </section>
@@ -193,17 +195,38 @@ td.num,th.num{text-align:right}
 
 <dialog id="dlg">
   <div class="mhead">
-    <div><b style="font-size:1.25rem">📋 ผลคะแนน (สำหรับครู)</b><div class="muted" style="font-size:.9rem">มีชื่อ-นามสกุลจริง ไม่ควรแสดงบนโปรเจกเตอร์</div></div>
+    <div><b style="font-size:1.25rem">📋 ผลคะแนน (สำหรับครู)</b><div class="muted" style="font-size:.9rem" id="resSub">มีชื่อ-นามสกุลจริง ไม่ควรแสดงบนโปรเจกเตอร์</div></div>
     <div class="row" style="margin:0">
       <div class="seg" id="sortSeg"><button data-s="score" class="on">เรียงตามคะแนน</button><button data-s="speed">เรียงตามความเร็ว</button></div>
       <button class="btn green" id="btnCsv">⬇ ดาวน์โหลด Excel (CSV)</button>
       <button class="btn" id="btnDlgClose">ปิด</button>
     </div>
   </div>
+  <div class="mhead" style="padding-top:10px;padding-bottom:10px">
+    <div class="row" style="margin:0;flex:1">
+      <label for="mailTo" style="font-weight:600">✉️ ส่งผลทางอีเมล</label>
+      <input id="mailTo" type="email" style="font:inherit;padding:8px 12px;border-radius:10px;border:2px solid var(--line);background:var(--card);color:var(--ink);min-width:240px;flex:1;max-width:340px">
+      <button class="btn pink" id="btnGmail">ส่งด้วย Gmail</button>
+      <button class="btn" id="btnMailto">แอปอีเมล</button>
+    </div>
+    <div class="muted" style="font-size:.85rem;width:100%">ระบบเปิดหน้าเขียนอีเมลพร้อมสรุปผลให้ กด "ส่ง" เอง · ถ้าต้องการไฟล์ Excel ให้ดาวน์โหลด CSV แล้วแนบเพิ่ม</div>
+  </div>
   <div class="mbody">
     <table><thead><tr><th class="num">อันดับ</th><th>ชื่อ-นามสกุล</th><th>ชื่อเล่น</th><th class="num">คะแนน</th><th class="num">ตอบถูก</th><th class="num">เวลาตอบเฉลี่ย</th><th class="num">ตอบถูกเร็วสุด (ข้อ)</th></tr></thead><tbody id="resBody"></tbody></table>
     <h3 style="margin-top:22px">⚡ คนที่ตอบถูกเร็วที่สุดในแต่ละข้อ</h3>
     <table><thead><tr><th>ข้อ</th><th>ชื่อ-นามสกุล</th><th>ชื่อเล่น</th><th class="num">เวลา</th><th class="num">ตอบถูก / ตอบทั้งหมด</th></tr></thead><tbody id="fastBody"></tbody></table>
+  </div>
+</dialog>
+
+<dialog id="dlgHist">
+  <div class="mhead">
+    <div><b style="font-size:1.25rem">🗂️ ประวัติเกมที่เคยเล่น</b><div class="muted" style="font-size:.9rem">เก็บไว้ในเบราว์เซอร์ของเครื่องนี้ (สูงสุด 100 เกมล่าสุด)</div></div>
+    <div class="row" style="margin:0">
+      <button class="btn" id="btnHistClose">ปิด</button>
+    </div>
+  </div>
+  <div class="mbody">
+    <table><thead><tr><th>วันที่ / เวลา</th><th>PIN</th><th class="num">ผู้เล่น</th><th class="num">ข้อที่เล่น</th><th>ผู้ชนะ</th><th></th></tr></thead><tbody id="histBody"></tbody></table>
   </div>
 </dialog>
 
@@ -482,7 +505,7 @@ td.num,th.num{text-align:right}
 
   function goEnd() {
     clearInterval(tickInt);
-    G.phase = "end"; save(); publishState(); sendAll();
+    G.phase = "end"; save(); publishState(); sendAll(); archive();
     const rk = ranked();
     const slot = (p, cls, n) => p ? `<div class="pod ${cls}">${QZ.avatarHTML(p.av, 86)}<div class="nm">${esc(p.nick)}</div><div class="sc">${p.score.toLocaleString()} คะแนน</div><div class="blk">${n}</div></div>` : `<div class="pod ${cls}" style="visibility:hidden"><div class="blk">${n}</div></div>`;
     $("podium").innerHTML = slot(rk[1], "p2", 2) + slot(rk[0], "p1", 1) + slot(rk[2], "p3", 3);
@@ -500,6 +523,7 @@ td.num,th.num{text-align:right}
       setTimeout(() => { net.clear("state"); for (const pid of [...Object.keys(G.players), ...Object.keys(G.kicked)]) net.clear("p/" + pid); }, 1500);
       const old = net; setTimeout(() => old.stop(), 4000);
     }
+    archive();
     QZ.store.del(SAVE);
     G = null; net = null;
     A.stopMusic(); setNet(0, 0); $("net").lastChild.textContent = "ยังไม่เชื่อมต่อ";
@@ -507,52 +531,128 @@ td.num,th.num{text-align:right}
     show("setup");
   }
 
-  /* ---------- ผลคะแนนสำหรับครู ---------- */
-  function fastestPerQ() {
-    return Q.map((q, i) => {
-      const ps = list().filter((p) => p.ans[i]);
-      const ok = ps.filter((p) => p.ans[i].ok).sort((a, b) => a.ans[i].ms - b.ans[i].ms);
-      return { i, p: ok[0], nOk: ok.length, n: ps.length };
+  /* ---------- ผลคะแนนสำหรับครู (ใช้ได้ทั้งเกมปัจจุบันและเกมในประวัติ) ---------- */
+  const HIST = "bcq-host-history", MAILK = "bcq-host-mail", DEF_MAIL = "workinghpc2@gmail.com";
+  let V = null; // เกมที่กำลังดูในหน้าต่างผลคะแนน (null = เกมปัจจุบัน)
+  const view = () => V || G;
+  const qsOf = (g) => g.qs || Q.map((q) => ({ text: q.text, answer: q.answer }));
+  const rankedOf = (g) => Object.values(g.players).sort((a, b) => b.score - a.score || statsOf(a).tOk - statsOf(b).tOk || a.joinedAt - b.joinedAt);
+  const thDate = (t) => new Date(t).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" });
+  function fastestPerQ(g) {
+    const ps = Object.values(g.players);
+    return qsOf(g).map((q, i) => {
+      const as = ps.filter((p) => p.ans[i]);
+      const ok = as.filter((p) => p.ans[i].ok).sort((a, b) => a.ans[i].ms - b.ans[i].ms);
+      return { i, p: ok[0], nOk: ok.length, n: as.length };
     });
   }
-  function rowsSorted() {
-    const r = ranked();
+  function rowsSorted(g) {
+    const r = rankedOf(g);
     const rankOf = new Map(r.map((p, i) => [p, i + 1]));
-    const fq = fastestPerQ();
+    const fq = fastestPerQ(g);
     const nFast = (p) => fq.filter((f) => f.p === p).length;
     let ps = r;
     if (sortBy === "speed") ps = [...r].sort((a, b) => statsOf(a).avg - statsOf(b).avg || b.score - a.score);
     return ps.map((p, i) => ({ p, no: sortBy === "speed" ? i + 1 : rankOf.get(p), st: statsOf(p), nFast: nFast(p) }));
   }
   function renderResults() {
-    if (!G) { $("resBody").innerHTML = `<tr><td colspan="7">ยังไม่มีเกม</td></tr>`; $("fastBody").innerHTML = ""; return; }
-    const rows = rowsSorted();
+    const g = view();
+    $("resSub").textContent = (V ? `ประวัติ: ${thDate(V.endedAt || V.createdAt)} · PIN ${V.pin} · ` : "") + "มีชื่อ-นามสกุลจริง ไม่ควรแสดงบนโปรเจกเตอร์";
+    if (!g) { $("resBody").innerHTML = `<tr><td colspan="7">ยังไม่มีเกม</td></tr>`; $("fastBody").innerHTML = ""; return; }
+    const nQ = qsOf(g).length, rows = rowsSorted(g);
     $("resBody").innerHTML = rows.length ? rows.map(({ p, no, st, nFast }) =>
-      `<tr><td class="num">${no}</td><td>${esc(p.name)}</td><td>${QZ.avatarHTML(p.av, 24)} ${esc(p.nick)}</td><td class="num"><b>${p.score.toLocaleString()}</b></td><td class="num">${st.ok}/${Q.length}</td><td class="num">${st.n ? sec(st.avg) : "-"}</td><td class="num">${nFast || "-"}</td></tr>`).join("")
+      `<tr><td class="num">${no}</td><td>${esc(p.name)}</td><td>${QZ.avatarHTML(p.av, 24)} ${esc(p.nick)}</td><td class="num"><b>${p.score.toLocaleString()}</b></td><td class="num">${st.ok}/${nQ}</td><td class="num">${st.n ? sec(st.avg) : "-"}</td><td class="num">${nFast || "-"}</td></tr>`).join("")
       : `<tr><td colspan="7">ยังไม่มีผู้เล่น</td></tr>`;
-    $("fastBody").innerHTML = fastestPerQ().filter((f) => f.n || f.i <= G.qi).map((f) =>
+    $("fastBody").innerHTML = fastestPerQ(g).filter((f) => f.n || f.i <= g.qi).map((f) =>
       `<tr><td>${f.i + 1}</td><td>${f.p ? esc(f.p.name) : "-"}</td><td>${f.p ? esc(f.p.nick) : "-"}</td><td class="num">${f.p ? sec(f.p.ans[f.i].ms) : "-"}</td><td class="num">${f.nOk} / ${f.n}</td></tr>`).join("");
   }
   function downloadCsv() {
-    if (!G) return;
+    const g = view();
+    if (!g) return;
+    const qs = qsOf(g);
     const cell = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     const head = ["อันดับ", "ชื่อ-นามสกุล (สำหรับเกียรติบัตร)", "คำนำหน้า", "ชื่อ-นามสกุล (ไม่มีคำนำหน้า)", "ชื่อเล่น", "คะแนนรวม", "ตอบถูก (ข้อ)", "เวลาตอบเฉลี่ย (วินาที)", "ตอบถูกเร็วสุด (ข้อ)"];
-    Q.forEach((_, i) => head.push(`ข้อ ${i + 1} คำตอบ`, `ข้อ ${i + 1} ผล`, `ข้อ ${i + 1} เวลา (วินาที)`, `ข้อ ${i + 1} คะแนน`));
+    qs.forEach((_, i) => head.push(`ข้อ ${i + 1} คำตอบ`, `ข้อ ${i + 1} ผล`, `ข้อ ${i + 1} เวลา (วินาที)`, `ข้อ ${i + 1} คะแนน`));
     const lines = [head];
-    for (const { p, no, st, nFast } of rowsSorted()) {
+    for (const { p, no, st, nFast } of rowsSorted(g)) {
       const row = [no, p.name, p.title || "", p.plain || "", p.nick, p.score, st.ok, st.n ? (st.avg / 1000).toFixed(2) : "", nFast];
-      Q.forEach((_, i) => { const a = p.ans[i]; row.push(a ? (a.a ? "ถูกต้อง" : "ไม่ถูกต้อง") : "ไม่ได้ตอบ", a ? (a.ok ? "✔" : "✘") : "", a ? (a.ms / 1000).toFixed(2) : "", a ? a.pts : 0); });
+      qs.forEach((_, i) => { const a = p.ans[i]; row.push(a ? (a.a ? "ถูกต้อง" : "ไม่ถูกต้อง") : "ไม่ได้ตอบ", a ? (a.ok ? "✔" : "✘") : "", a ? (a.ms / 1000).toFixed(2) : "", a ? a.pts : 0); });
       lines.push(row);
     }
     const blob = new Blob(["﻿" + lines.map((r) => r.map(cell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
-    const d = new Date(), pad = (n) => String(n).padStart(2, "0");
+    const d = new Date(g.endedAt || Date.now()), pad = (n) => String(n).padStart(2, "0");
     a.href = URL.createObjectURL(blob);
-    a.download = `quiz-results_PIN${G.pin}_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
+    a.download = `quiz-results_PIN${g.pin}_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
-  const openResults = () => { renderResults(); $("dlg").showModal(); };
+
+  /* ---------- ส่งผลทางอีเมล ---------- */
+  function mailContent(g) {
+    const qs = qsOf(g), rk = rankedOf(g), fq = fastestPerQ(g);
+    const subject = `ผลควิซ ${g.title || QUIZ.title} · ${thDate(g.endedAt || g.createdAt || Date.now())} · PIN ${g.pin}`;
+    const L = [
+      `ผลควิซ: ${g.title || QUIZ.title}`,
+      `วันที่: ${thDate(g.endedAt || g.createdAt || Date.now())}`,
+      `PIN: ${g.pin} · ผู้เล่น ${rk.length} คน · คำถาม ${qs.length} ข้อ (เล่นไป ${Math.max(0, g.qi + 1)} ข้อ)`,
+      "",
+      "อันดับ | ชื่อ-นามสกุล | ชื่อเล่น | คะแนน | ตอบถูก | เวลาเฉลี่ย",
+    ];
+    rk.forEach((p, i) => { const st = statsOf(p); L.push(`${i + 1}. ${p.name} (${p.nick}) | ${p.score.toLocaleString()} คะแนน | ถูก ${st.ok}/${qs.length} | ${st.n ? sec(st.avg) : "-"}`); });
+    L.push("", "คนที่ตอบถูกเร็วที่สุดในแต่ละข้อ");
+    fq.filter((f) => f.n).forEach((f) => L.push(`ข้อ ${f.i + 1}: ${f.p ? `${f.p.name} (${f.p.nick}) ${sec(f.p.ans[f.i].ms)}` : "-"} · ถูก ${f.nOk}/${f.n}`));
+    L.push("", "ส่งจากหน้าครู: " + location.href.split("?")[0]);
+    return { subject, body: L.join("\n") };
+  }
+  const mailAddr = () => $("mailTo").value.trim() || DEF_MAIL;
+  function sendMail(kind) {
+    const g = view();
+    if (!g || !Object.keys(g.players).length) return alert("ยังไม่มีผลคะแนนให้ส่ง");
+    QZ.store.set(MAILK, mailAddr());
+    const { subject, body } = mailContent(g);
+    const url = kind === "gmail"
+      ? "https://mail.google.com/mail/?view=cm&fs=1&to=" + encodeURIComponent(mailAddr()) + "&su=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body)
+      : "mailto:" + encodeURIComponent(mailAddr()) + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+    if (kind === "gmail") window.open(url, "_blank", "noopener"); else location.href = url;
+  }
+  $("mailTo").value = QZ.store.get(MAILK) || DEF_MAIL;
+  $("btnGmail").onclick = () => sendMail("gmail");
+  $("btnMailto").onclick = () => sendMail("mailto");
+
+  /* ---------- ประวัติเกม ---------- */
+  const histAll = () => QZ.store.get(HIST, []) || [];
+  function archive() {
+    if (!G || !Object.values(G.players).some((p) => Object.keys(p.ans).length)) return;
+    const snap = JSON.parse(JSON.stringify({ roomId: G.roomId, pin: G.pin, title: QUIZ.title, createdAt: G.createdAt, endedAt: Date.now(), dur: G.dur, qi: G.qi, players: G.players }));
+    snap.qs = qsOf(G);
+    const h = histAll().filter((x) => x.roomId !== G.roomId);
+    h.unshift(snap);
+    QZ.store.set(HIST, h.slice(0, 100));
+    updHistCount();
+  }
+  const updHistCount = () => { $("nHist").textContent = histAll().length; };
+  function renderHistory() {
+    const h = histAll();
+    $("histBody").innerHTML = h.length ? h.map((g, i) => {
+      const rk = rankedOf(g), w = rk[0];
+      return `<tr><td>${thDate(g.endedAt || g.createdAt)}</td><td>${esc(g.pin)}</td><td class="num">${rk.length}</td><td class="num">${Math.max(0, g.qi + 1)}/${qsOf(g).length}</td><td>${w ? esc(w.name) + " (" + esc(w.nick) + ") · " + w.score.toLocaleString() : "-"}</td>
+        <td><button class="btn" data-v="${i}">ดูผล / ส่งอีเมล</button> <button class="btn ghost" data-d="${i}" title="ลบ" style="color:var(--ink)">🗑</button></td></tr>`;
+    }).join("") : `<tr><td colspan="6">ยังไม่มีประวัติ — เล่นเกมจบหรือปิดห้องแล้ว ผลจะถูกเก็บไว้ที่นี่อัตโนมัติ</td></tr>`;
+  }
+  $("histBody").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    const h = histAll();
+    if (b.dataset.v != null) { V = h[+b.dataset.v]; $("dlgHist").close(); renderResults(); $("dlg").showModal(); }
+    else if (b.dataset.d != null && confirm("ลบประวัติเกมนี้?")) { h.splice(+b.dataset.d, 1); QZ.store.set(HIST, h); renderHistory(); updHistCount(); }
+  };
+  const openHistory = () => { renderHistory(); $("dlgHist").showModal(); };
+  $("btnHistory").onclick = $("btnHistory2").onclick = openHistory;
+  $("btnHistClose").onclick = () => $("dlgHist").close();
+  $("dlg").addEventListener("close", () => { V = null; });
+  updHistCount();
+
+  const openResults = () => { V = null; renderResults(); $("dlg").showModal(); };
   $("btnResults").onclick = $("btnShowRes").onclick = openResults;
   $("btnDlgClose").onclick = () => $("dlg").close();
   $("btnCsv").onclick = downloadCsv;
@@ -574,7 +674,7 @@ td.num,th.num{text-align:right}
   $("chkMusic").onchange = () => { if (!musicOn()) A.stopMusic(); };
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== " " && e.key !== "ArrowRight") return;
-    if ($("dlg").open || e.target.tagName === "BUTTON" || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+    if ($("dlg").open || $("dlgHist").open || e.target.tagName === "BUTTON" || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
     const vis = [...document.querySelectorAll("section.screen:not(.hidden) .btn.big:not(.hidden):not(:disabled), section.screen:not(.hidden) #btnSkip:not(.hidden)")];
     if (vis[0]) { e.preventDefault(); vis[vis.length - 1].click(); }
   });
