@@ -1,0 +1,44 @@
+{
+  "female": {
+    "label": "หญิง - เสียงผู้หญิงธรรมชาติ อบอุ่น เป็นกันเอง (ค่าเริ่มต้น)",
+    "voice": "th-TH-PremwadeeNeural",
+    "rate": 0,
+    "pitch": 0,
+    "aliases": ["หญิง", "ผู้หญิง", "woman", "f"]
+  },
+  "male": {
+    "label": "ชาย - เสียงผู้ชายธรรมชาติ สุภาพ น่าเชื่อถือ",
+    "voice": "th-TH-NiwatNeural",
+    "rate": 0,
+    "pitch": 0,
+    "aliases": ["ชาย", "ผู้ชาย", "man", "m"]
+  },
+  "female-bright": {
+    "label": "หญิงสดใส - เสียงสูงขึ้น เร็วขึ้นเล็กน้อย เหมาะกับรีวิว/โฆษณา",
+    "voice": "th-TH-PremwadeeNeural",
+    "rate": 6,
+    "pitch": 12,
+    "aliases": ["หญิงสดใส"]
+  },
+  "female-calm": {
+    "label": "หญิงนุ่ม - ช้าลง ทุ้มลงเล็กน้อย เหมาะกับสารคดี/สุขภาพ",
+    "voice": "th-TH-PremwadeeNeural",
+    "rate": -6,
+    "pitch": -8,
+    "aliases": ["หญิงนุ่ม"]
+  },
+  "male-deep": {
+    "label": "ชายทุ้ม - ทุ้มและช้าลง เหมาะกับสารคดี/เล่าเรื่อง",
+    "voice": "th-TH-NiwatNeural",
+    "rate": -5,
+    "pitch": -12,
+    "aliases": ["ชายทุ้ม"]
+  },
+  "male-bright": {
+    "label": "ชายกระฉับกระเฉง - เร็วและสดขึ้น เหมาะกับรีวิว/ข่าวสั้น",
+    "voice": "th-TH-NiwatNeural",
+    "rate": 7,
+    "pitch": 8,
+    "aliases": ["ชายสดใส"]
+  }
+}
