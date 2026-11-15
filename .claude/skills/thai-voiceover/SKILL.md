@@ -114,7 +114,9 @@ python scripts/dub.py VIDEO script.json -o OUTPUT.mp4 --voice female --original 
 
 Other useful flags: `--burn-subs` (burn Thai subtitles into the picture - only
 when asked, it re-encodes the video), `--voice-gain 1.3` (louder narrator),
-`--bg-volume 0.2`, `--max-speed 1.3`.
+`--bg-volume 0.2`, `--max-speed 1.3`, `--rate -8` (calmer pace; use when the user says
+the voice is too fast - and also give each line a longer slot, because a line
+that overflows its slot gets sped up again).
 
 The script always writes `OUTPUT.th.srt` next to the video with the real spoken
 timings. The picture is copied untouched unless subtitles are burned in or the

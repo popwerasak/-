@@ -273,7 +273,13 @@ def mux(video, track, out, mode, has_audio, bg_volume, voice_gain, extend, srt, 
         vf.append(f"tpad=stop_mode=clone:stop_duration={extend:.2f}")
     if srt:
         esc = srt.replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
-        style = f"FontName={font},FontSize=20,Outline=1.5,MarginV=28"
+        # libass sizes text relative to frame height, so a size that suits 16:9
+        # fills half the screen on a vertical 9:16 reel - shrink it there.
+        dims = run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                    "stream=width,height", "-of", "csv=p=0", video]).strip().split(",")
+        portrait = int(dims[1]) > int(dims[0])
+        size, margin = (11, 48) if portrait else (20, 28)
+        style = f"FontName={font},FontSize={size},Outline=1,MarginV={margin}"
         vf.append(f"subtitles='{esc}':force_style='{style}'")
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", video, "-i", track]
     if vf:
@@ -310,6 +316,8 @@ def main():
                     help="what to do with the video's own sound (default: low)")
     ap.add_argument("--bg-volume", type=float, default=0.12, help="original volume in 'low' mode")
     ap.add_argument("--voice-gain", type=float, default=1.0)
+    ap.add_argument("--rate", type=float, default=0,
+                    help="speaking pace in %% on top of the preset, e.g. -8 = calmer, 8 = brisker")
     ap.add_argument("--max-speed", type=float, default=1.3, help="max speed-up used to fit a slot")
     ap.add_argument("--gap", type=float, default=0.35, help="pause between lines of an untimed script")
     ap.add_argument("--burn-subs", action="store_true", help="burn Thai subtitles into the picture")
@@ -343,6 +351,7 @@ def main():
     for s in segs:
         s["edge"], s["rate"], s["pitch"] = resolve_voice(
             s.get("voice") or a.voice or default_voice, voices)
+        s["rate"] += a.rate
 
     with tempfile.TemporaryDirectory() as tmp:
         print(f"Synthesizing {len(segs)} lines...")
