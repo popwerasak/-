@@ -122,6 +122,24 @@ The script always writes `OUTPUT.th.srt` next to the video with the real spoken
 timings. The picture is copied untouched unless subtitles are burned in or the
 narration runs past the end (then the last frame is held).
 
+### Removing dead air (ตัดช่องไฟ)
+
+When the user wants the gaps between lines cut out, or the scenes are much
+longer than the narration, use `scripts/tighten.py` instead of `dub.py`. Give it
+the same JSON with each segment's `start` set to the time its scene begins in the
+source (find the cuts with ffmpeg's scene detection on the caption area,
+`select='gt(scene,0.02)'`). It voices each line, keeps each scene from its start
+for exactly lead + speech + `--gap` seconds, lays the original music underneath
+without chopping it, and fades out at the end:
+
+```bash
+python scripts/tighten.py VIDEO script.json -o OUT.mp4 --gap 0.5 --rate -4
+```
+
+If the source fades out at the end, set the last segment's `end` to where the
+fade starts so the fade isn't kept mid-clip. A scene shorter than its line has
+its last frame held (it warns you).
+
 ### 4. Check before handing over
 
 Read the script's output. A `WARNING: segment N ... over its slot` means that
