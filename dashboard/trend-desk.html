@@ -1,0 +1,260 @@
+<title>โต๊ะเทรนด์</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Prompt:wght@500;600;700&display=swap">
+<style>
+/* Layout: sticky tab bar over a single reading column of ranked rows; rank numeral is the anchor of every row. */
+:root{
+  --bg:#f3f6f7; --surface:#ffffff; --line:#d9e1e4; --fg:#12242b; --muted:#5a6d75;
+  --accent:#0b7f72; --accent-soft:#dff1ee; --on-accent:#ffffff;
+  --reach:#2c5fb3; --reach-soft:#e2ebf9; --sell:#a35a00; --sell-soft:#fbecd4;
+  --up:#1a8a4a; --down:#b93a3a; --warn-soft:#fdf3d7; --warn:#7a5a00;
+  --display:"Prompt","IBM Plex Sans Thai",system-ui,sans-serif;
+  --body:"IBM Plex Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e171b; --surface:#16232a; --line:#2a3b43; --fg:#e6eef0; --muted:#93a6ad;
+    --accent:#3fc4b3; --accent-soft:#143a36; --on-accent:#06201c;
+    --reach:#8db4f2; --reach-soft:#1b2c48; --sell:#f0b25a; --sell-soft:#3d2c10;
+    --up:#5fd08c; --down:#f08a8a; --warn-soft:#3a3010; --warn:#f0d77a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e171b; --surface:#16232a; --line:#2a3b43; --fg:#e6eef0; --muted:#93a6ad;
+  --accent:#3fc4b3; --accent-soft:#143a36; --on-accent:#06201c;
+  --reach:#8db4f2; --reach-soft:#1b2c48; --sell:#f0b25a; --sell-soft:#3d2c10;
+  --up:#5fd08c; --down:#f08a8a; --warn-soft:#3a3010; --warn:#f0d77a; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.65}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:860px;margin:0 auto;padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px}
+h1{font-family:var(--display);font-size:26px;font-weight:700;margin:0;letter-spacing:.01em}
+.stamp{color:var(--muted);font-size:13px}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:4px;overflow-x:auto;margin-top:14px;padding-block:8px;border-bottom:1px solid var(--line)}
+nav.tabs button{flex:none;font:500 14px var(--body);color:var(--muted);background:none;border:0;border-radius:999px;padding:7px 14px;cursor:pointer}
+nav.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg)}
+button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:18px 0 6px}
+.bar h2{font-family:var(--display);font-size:19px;font-weight:600;margin:0;flex:1 1 200px;text-wrap:balance}
+select,input{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;max-width:100%}
+.note{color:var(--muted);font-size:13px;margin:0 0 10px}
+.banner{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:13px;margin-top:12px}
+ol.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+ol.list>li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:0 10px;padding:18px 0;border-bottom:1px solid var(--line)}
+.rank{font-family:var(--display);font-weight:700;font-size:28px;line-height:1.1;color:var(--accent);font-variant-numeric:tabular-nums}
+.mv{display:block;font:500 11px var(--body);margin-top:4px}
+.mv.up{color:var(--up)}.mv.down{color:var(--down)}.mv.new{color:var(--reach)}.mv.same{color:var(--muted)}
+.body{display:flex;flex-direction:column;gap:8px;min-width:0}
+h3{font:600 16.5px/1.45 var(--body);margin:0;text-wrap:balance;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;color:var(--muted)}
+.chip{border-radius:999px;padding:1px 9px;background:var(--accent-soft);color:var(--accent);font-weight:500}
+.chip.reach{background:var(--reach-soft);color:var(--reach)}.chip.sell{background:var(--sell-soft);color:var(--sell)}
+p{margin:0;overflow-wrap:anywhere}
+dl{margin:0;display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+dl>div{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px}
+dt{color:var(--muted);font-size:12.5px;padding-top:2px}
+dd{margin:0;overflow-wrap:anywhere}
+.copybox{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;gap:8px;align-items:flex-start}
+.copybox span{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.copybox b{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.btn{font:500 13px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:5px 10px;cursor:pointer;flex:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+a{color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:500 12.5px var(--body);background:var(--surface);color:var(--muted);border:0;border-left:1px solid var(--line);padding:5px 10px;cursor:pointer}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.empty{padding:36px 0;color:var(--muted);text-align:center}
+.plan{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+.plan>div{display:grid;grid-template-columns:76px minmax(0,1fr);gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.plan .day{font-family:var(--display);font-weight:600}
+form.add{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0 6px}
+form.add label{display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--muted);min-width:0}
+form.add .wide{grid-column:1/-1}
+.cmp{display:flex;flex-direction:column;gap:8px;margin:16px 0}
+.cmp .line{display:grid;grid-template-columns:88px minmax(0,1fr) 84px;gap:8px;align-items:center;font-size:13px}
+.cmp .track{height:12px;border-radius:6px;background:var(--line);overflow:hidden}
+.cmp .fill{height:100%;border-radius:6px}
+.cmp .num{text-align:right;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:8px 8px 8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:12.5px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>โต๊ะเทรนด์</h1>
+    <span class="stamp" id="stamp">กำลังโหลดข้อมูล…</span>
+  </header>
+  <div class="banner" id="banner" hidden></div>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="news" aria-selected="true">ข่าวดังวันนี้</button>
+    <button role="tab" data-tab="products" aria-selected="false">สินค้า Top 10</button>
+    <button role="tab" data-tab="topics" aria-selected="false">เรื่องมาแรง</button>
+    <button role="tab" data-tab="plan" aria-selected="false">แผนโพสต์</button>
+    <button role="tab" data-tab="posts" aria-selected="false">ผลงานโพสต์</button>
+  </nav>
+
+  <section id="view-news">
+    <div class="bar"><h2>ข่าวดังประจำวัน</h2><select id="sel-day" aria-label="เลือกวัน"></select></div>
+    <p class="note">อัปเดตทุกเช้า เปิดลิงก์ต้นทางเพื่อตรวจข่าวก่อนทำภาพทุกครั้ง</p>
+    <ol class="list" id="list-news"></ol>
+  </section>
+
+  <section id="view-products" hidden>
+    <div class="bar"><h2>สินค้ามาแรง 10 อันดับ</h2><select id="sel-week-p" aria-label="เลือกสัปดาห์"></select></div>
+    <p class="note">จัดอันดับจากสัญญาณเทรนด์บนเว็บ ไม่ใช่ยอดขายจริงของ Shopee</p>
+    <ol class="list" id="list-products"></ol>
+  </section>
+
+  <section id="view-topics" hidden>
+    <div class="bar"><h2>เรื่องมาแรง 10 เรื่อง</h2><select id="sel-week-t" aria-label="เลือกสัปดาห์"></select></div>
+    <p class="note">ใช้ทำคลิปดึงยอด แต่ละเรื่องมีสินค้าที่ผูกได้โดยไม่ต้องขายตรง</p>
+    <ol class="list" id="list-topics"></ol>
+  </section>
+
+  <section id="view-plan" hidden>
+    <div class="bar"><h2>แผนโพสต์รายสัปดาห์</h2><select id="sel-week-l" aria-label="เลือกสัปดาห์"></select></div>
+    <p class="note">สลับคลิปดึงยอดกับคลิปขาย เพื่อไม่ให้เพจมีแต่โพสต์ขายของติดกัน</p>
+    <div class="plan" id="list-plan"></div>
+  </section>
+
+  <section id="view-posts" hidden>
+    <div class="bar"><h2>ผลงานโพสต์</h2></div>
+    <p class="note">บันทึกยอดเข้าถึงจาก Meta Business Suite หลังโพสต์ 2–3 วัน เพื่อดูว่าแนวไหนถูกดัน</p>
+    <form class="add" id="form-post">
+      <label>วันที่โพสต์<input type="date" id="post-date" required></label>
+      <label>ประเภท<select id="post-type"><option value="reach">คลิปดึงยอด</option><option value="sell">คลิปขาย</option><option value="news">ภาพข่าว</option></select></label>
+      <label>ยอดเข้าถึง<input type="number" id="post-reach" min="0" inputmode="numeric" required></label>
+      <label class="wide">ชื่อโพสต์<input type="text" id="post-title" maxlength="120" required></label>
+      <div class="row wide"><button class="btn primary" type="submit" id="post-save">บันทึกโพสต์</button><span class="note" id="post-msg" style="margin:0"></span></div>
+    </form>
+    <div class="cmp" id="cmp"></div>
+    <div class="scroll"><table id="tbl-posts"></table></div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var S={weeks:[],days:[],status:{},posts:[],tab:"news",day:null,week:null,db:null,ro:false};
+  var $=function(id){return document.getElementById(id)};
+  var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
+  var safeUrl=function(u){return /^https:\/\//.test(String(u||""))?String(u):""};
+  var TYPE={reach:"คลิปดึงยอด",sell:"คลิปขาย",news:"ภาพข่าว"};
+  var MOVE={up:"▲ ขึ้น",down:"▼ ลง","new":"● ใหม่",same:"– คงที่"};
+  var STATES=[["interested","สนใจ"],["doing","กำลังทำ"],["posted","โพสต์แล้ว"]];
+  try{var t=localStorage.getItem("td-tab");if(t&&$("view-"+t))S.tab=t}catch(e){}
+
+  function thDate(iso){var d=new Date(iso+"T00:00:00");if(isNaN(d))return iso;return d.toLocaleDateString("th-TH",{weekday:"short",day:"numeric",month:"short",year:"numeric"})}
+  function seg(key){var cur=(S.status[key]||{}).state;return '<div class="seg" role="group" aria-label="สถานะ">'+STATES.map(function(s){return '<button type="button" data-status="'+esc(key)+'" data-state="'+s[0]+'" aria-pressed="'+(cur===s[0])+'"'+(S.ro?" disabled":"")+'>'+s[1]+'</button>'}).join("")+'</div>'}
+  function copybox(label,text){if(!text)return "";return '<div class="copybox"><span><b>'+esc(label)+'</b>'+esc(text)+'</span><button type="button" class="btn" data-copy="'+esc(text)+'">คัดลอก</button></div>'}
+  function row(dt,dd){return dd?'<div><dt>'+esc(dt)+'</dt><dd>'+dd+'</dd></div>':""}
+  function src(it){var u=safeUrl(it.url);return u?'<a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(it.source||"แหล่งข่าว")+'</a>':esc(it.source||"")}
+  function empty(msg){return '<li class="empty" style="display:block">'+esc(msg)+'</li>'}
+
+  function fillSelect(el,items,cur,labelFn){
+    el.innerHTML=items.map(function(d){return '<option value="'+esc(d.id)+'"'+(d.id===cur?" selected":"")+'>'+esc(labelFn(d))+'</option>'}).join("");
+    el.hidden=items.length<2;
+  }
+  function curDay(){return S.days.filter(function(d){return d.id===S.day})[0]||S.days[0]}
+  function curWeek(){return S.weeks.filter(function(w){return w.id===S.week})[0]||S.weeks[0]}
+
+  function render(){
+    ["news","products","topics","plan","posts"].forEach(function(t){$("view-"+t).hidden=t!==S.tab});
+    Array.prototype.forEach.call($("tabs").children,function(b){b.setAttribute("aria-selected",b.dataset.tab===S.tab)});
+    var d=curDay(),w=curWeek();
+    fillSelect($("sel-day"),S.days,d&&d.id,function(x){return thDate(x.id)});
+    ["sel-week-p","sel-week-t","sel-week-l"].forEach(function(id){fillSelect($(id),S.weeks,w&&w.id,function(x){return x.label||x.id})});
+
+    $("list-news").innerHTML=d&&(d.news||[]).length?d.news.map(function(n,i){
+      var key="d-"+d.id+"-n"+(n.rank||i+1);
+      return '<li><div class="rank">'+esc(n.rank||i+1)+'</div><div class="body"><h3>'+esc(n.title)+'</h3>'+
+        '<div class="meta">'+(n.category?'<span class="chip">'+esc(n.category)+'</span>':"")+'<span>'+src(n)+'</span></div>'+
+        '<p>'+esc(n.summary)+'</p>'+copybox("พาดหัวบนภาพ",n.headline)+copybox("แคปชันโพสต์",n.caption)+seg(key)+'</div></li>'}).join(""):
+      empty("ยังไม่มีข่าวของวันนี้ ระบบจะเติมรายการให้ทุกเช้า");
+
+    $("list-products").innerHTML=w&&(w.products||[]).length?w.products.map(function(p,i){
+      var key="w-"+w.id+"-p"+(p.rank||i+1),mv=MOVE[p.move]?p.move:"new";
+      var q="https://shopee.co.th/search?keyword="+encodeURIComponent(p.keyword||p.name||"");
+      return '<li><div class="rank">'+esc(p.rank||i+1)+'<span class="mv '+mv+'">'+MOVE[mv]+'</span></div><div class="body"><h3>'+esc(p.name)+'</h3>'+
+        '<div class="meta">'+(p.category?'<span class="chip sell">'+esc(p.category)+'</span>':"")+(p.price?'<span>'+esc(p.price)+'</span>':"")+'</div>'+
+        '<dl>'+row("ทำไมมาแรง",esc(p.why))+row("มุมคลิปขาย",esc(p.idea))+row("ที่มา",src(p))+'</dl>'+
+        '<div class="row"><a class="btn" href="'+esc(q)+'" target="_blank" rel="noopener">ค้นใน Shopee</a>'+seg(key)+'</div></div></li>'}).join(""):
+      empty("ยังไม่มีอันดับสินค้า ระบบจะจัดอันดับใหม่ทุกเช้าวันจันทร์");
+
+    $("list-topics").innerHTML=w&&(w.topics||[]).length?w.topics.map(function(t,i){
+      var key="w-"+w.id+"-t"+(t.rank||i+1);
+      return '<li><div class="rank">'+esc(t.rank||i+1)+'</div><div class="body"><h3>'+esc(t.title)+'</h3>'+
+        '<div class="meta">'+(t.platforms||[]).map(function(x){return '<span class="chip reach">'+esc(x)+'</span>'}).join("")+'<span>'+src(t)+'</span></div>'+
+        '<p>'+esc(t.summary)+'</p><dl>'+row("3 วินาทีแรก",esc(t.hook))+row("มุมเล่า",esc(t.angle))+row("สินค้าที่ผูกได้",esc(t.product))+'</dl>'+seg(key)+'</div></li>'}).join(""):
+      empty("ยังไม่มีเรื่องมาแรง ระบบจะสรุปใหม่ทุกเช้าวันจันทร์");
+
+    $("list-plan").innerHTML=w&&(w.plan||[]).length?w.plan.map(function(p){
+      var ty=TYPE[p.type]?p.type:"reach";
+      return '<div><div class="day">'+esc(p.day)+'</div><div class="body"><div class="meta"><span class="chip '+(ty==="sell"?"sell":"reach")+'">'+TYPE[ty]+'</span></div><h3>'+esc(p.title)+'</h3>'+(p.note?'<p class="note" style="margin:0">'+esc(p.note)+'</p>':"")+'</div></div>'}).join(""):
+      '<div class="empty" style="display:block">ยังไม่มีแผนของสัปดาห์นี้</div>';
+
+    renderPosts();
+    var stamps=[d&&d.updatedAt,w&&w.updatedAt].filter(Boolean).sort();
+    if(stamps.length){var dt=new Date(stamps[stamps.length-1]);$("stamp").textContent="อัปเดตล่าสุด "+(isNaN(dt)?stamps[stamps.length-1]:dt.toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}))}
+  }
+
+  function renderPosts(){
+    var by={};S.posts.forEach(function(p){var k=TYPE[p.type]?p.type:"reach";(by[k]=by[k]||[]).push(Number(p.reach)||0)});
+    var avg=Object.keys(by).map(function(k){var a=by[k];return {k:k,n:a.length,v:Math.round(a.reduce(function(x,y){return x+y},0)/a.length)}});
+    var max=Math.max.apply(null,avg.map(function(a){return a.v}).concat([1]));
+    var col={reach:"var(--reach)",sell:"var(--sell)",news:"var(--accent)"};
+    $("cmp").innerHTML=avg.length?'<p class="note" style="margin:0">ยอดเข้าถึงเฉลี่ยต่อโพสต์ แยกตามประเภท</p>'+avg.map(function(a){
+      return '<div class="line"><span>'+TYPE[a.k]+' ('+a.n+')</span><div class="track"><div class="fill" style="width:'+(a.v/max*100).toFixed(1)+'%;background:'+col[a.k]+'"></div></div><span class="num">'+a.v.toLocaleString("th-TH")+'</span></div>'}).join(""):"";
+    $("tbl-posts").innerHTML=S.posts.length?'<tr><th>วันที่</th><th>โพสต์</th><th>ประเภท</th><th class="n">เข้าถึง</th><th></th></tr>'+S.posts.map(function(p){
+      return '<tr><td>'+esc(p.date)+'</td><td>'+esc(p.title)+'</td><td>'+esc(TYPE[p.type]||"")+'</td><td class="n">'+(Number(p.reach)||0).toLocaleString("th-TH")+'</td><td>'+(S.ro?"":'<button type="button" class="btn" data-del="'+esc(p.id)+'">ลบ</button>')+'</td></tr>'}).join(""):
+      '<tr><td class="empty">ยังไม่มีโพสต์ที่บันทึก กรอกโพสต์แรกในแบบฟอร์มด้านบน</td></tr>';
+  }
+
+  function banner(msg){$("banner").textContent=msg||"";$("banner").hidden=!msg}
+  function writeFail(e){if(e&&e.code==="invalid_argument"){S.ro=true;banner("บัญชีนี้ดูข้อมูลได้อย่างเดียว บันทึกสถานะไม่ได้");render()}else banner("บันทึกไม่สำเร็จ ลองอีกครั้ง")}
+
+  document.addEventListener("click",function(ev){
+    var b=ev.target.closest("button");if(!b)return;
+    if(b.dataset.tab){S.tab=b.dataset.tab;try{localStorage.setItem("td-tab",S.tab)}catch(e){}render();return}
+    if(b.dataset.copy!=null){var txt=b.dataset.copy,done=function(){b.textContent="คัดลอกแล้ว";setTimeout(function(){b.textContent="คัดลอก"},1500)};
+      try{navigator.clipboard.writeText(txt).then(done,function(){sel(b)})}catch(e){sel(b)}return}
+    if(b.dataset.status&&S.db){var key=b.dataset.status,st=b.dataset.state,ref=S.db.doc("status/"+key);
+      var off=(S.status[key]||{}).state===st;
+      (off?ref.delete():ref.set({state:st,at:new Date().toISOString()})).catch(writeFail);return}
+    if(b.dataset.del&&S.db){if(b.dataset.armed){S.db.doc("posts/"+b.dataset.del).delete().catch(writeFail)}else{b.dataset.armed="1";b.textContent="ยืนยันลบ"}return}
+  });
+  function sel(b){var s=b.parentNode.querySelector("span"),r=document.createRange();r.selectNodeContents(s);var g=getSelection();g.removeAllRanges();g.addRange(r)}
+  $("sel-day").addEventListener("change",function(e){S.day=e.target.value;render()});
+  ["sel-week-p","sel-week-t","sel-week-l"].forEach(function(id){$(id).addEventListener("change",function(e){S.week=e.target.value;render()})});
+  try{$("post-date").value=new Date().toLocaleDateString("en-CA")}catch(e){}
+  $("form-post").addEventListener("submit",function(ev){
+    ev.preventDefault();if(!S.db){$("post-msg").textContent="ยังเชื่อมฐานข้อมูลไม่ได้";return}
+    var btn=$("post-save");btn.disabled=true;
+    S.db.collection("posts").add({date:$("post-date").value,type:$("post-type").value,title:$("post-title").value.trim(),reach:Number($("post-reach").value)||0,createdAt:new Date().toISOString()})
+      .then(function(){$("post-title").value="";$("post-reach").value="";$("post-msg").textContent="บันทึกแล้ว"},function(e){$("post-msg").textContent="";writeFail(e)})
+      .then(function(){btn.disabled=false});
+  });
+
+  render();
+  var timer=setTimeout(function(){banner("ยังเชื่อมข้อมูลไม่ได้ ข้อมูลที่เห็นอาจไม่ใช่ล่าสุด")},10000);
+  function ok(snap){if(!snap.metadata.fromCache){clearTimeout(timer);if(!S.ro)banner("")}}
+  function bad(){clearTimeout(timer);banner("เชื่อมฐานข้อมูลไม่ได้ ลองเปิดหน้านี้ใหม่ภายหลัง")}
+  function rows(snap){return snap.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o})}
+  var boot=window.claude&&window.claude.use?window.claude.use("db"):Promise.resolve(null);
+  boot.then(function(db){
+    if(!db){clearTimeout(timer);$("stamp").textContent="";banner("ต้องเข้าสู่ระบบ Claude เพื่อดูข้อมูล");return}
+    S.db=db;
+    db.collection("days").onSnapshot(function(s){S.days=rows(s).sort(function(a,b){return a.id<b.id?1:-1}).slice(0,30);ok(s);render()},bad);
+    db.collection("weeks").onSnapshot(function(s){S.weeks=rows(s).sort(function(a,b){return a.id<b.id?1:-1}).slice(0,12);ok(s);render()},bad);
+    db.collection("status").onSnapshot(function(s){var m={};s.docs.forEach(function(d){m[d.id]=d.data()});S.status=m;render()},bad);
+    db.collection("posts").onSnapshot(function(s){S.posts=rows(s).sort(function(a,b){return (a.date||"")<(b.date||"")?1:-1});renderPosts()},bad);
+  });
+})();
+</script>
