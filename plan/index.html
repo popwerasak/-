@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+</head>
+<body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>แผนสุขภาพดีของฉัน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Mitr:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column. Form is a 4-step wizard; the plan is a report whose signature is a six-petal
+   "pillar flower" and a 7-day strip that opens one day at a time. Colour is spent on the six pillars only. */
+:root{
+  --bg:#f1f6f3; --card:#ffffff; --ink:#15241e; --muted:#586a62; --line:#d9e4de; --track:#e7eeea;
+  --accent:#0f6b57; --accent-ink:#ffffff; --accent-soft:#dcefe8;
+  --p-food:#3f8a2b; --p-move:#0b8f96; --p-sleep:#3355a8; --p-mind:#8250b8; --p-avoid:#bf4576; --p-social:#b97400;
+  --carb:#d8b166; --prot:#d67a55;
+  --good:#1b7a3d; --good-soft:#e1f4e7; --warn:#96560a; --warn-soft:#fbefd9; --bad:#b3261e; --bad-soft:#fbe3e1;
+  --display:"Mitr","Anuphan","Leelawadee UI","Thonburi",system-ui,sans-serif;
+  --body:"Anuphan","Leelawadee UI","Thonburi",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1613; --card:#16211d; --ink:#e6efeb; --muted:#9cb0a7; --line:#293a33; --track:#22302b;
+    --accent:#5fd0b3; --accent-ink:#06261e; --accent-soft:#17362e;
+    --p-food:#86cc6c; --p-move:#4fd0d6; --p-sleep:#8aa6f0; --p-mind:#b994e6; --p-avoid:#ee86ad; --p-social:#f0b54a;
+    --carb:#c9a25a; --prot:#d98563;
+    --good:#5fd08a; --good-soft:#15301f; --warn:#f2b451; --warn-soft:#38290c; --bad:#ff8a80; --bad-soft:#3b1a18;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1613; --card:#16211d; --ink:#e6efeb; --muted:#9cb0a7; --line:#293a33; --track:#22302b;
+  --accent:#5fd0b3; --accent-ink:#06261e; --accent-soft:#17362e;
+  --p-food:#86cc6c; --p-move:#4fd0d6; --p-sleep:#8aa6f0; --p-mind:#b994e6; --p-avoid:#ee86ad; --p-social:#f0b54a;
+  --carb:#c9a25a; --prot:#d98563;
+  --good:#5fd08a; --good-soft:#15301f; --warn:#f2b451; --warn-soft:#38290c; --bad:#ff8a80; --bad-soft:#3b1a18;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.65}
+.wrap{max-width:880px;margin:0 auto;padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--display);font-weight:500;line-height:1.3;margin:0;text-wrap:balance}
+h1{font-size:1.55rem} h2{font-size:1.25rem} h3{font-size:1.02rem}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:.875rem}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand svg{flex:none}
+.brand small{display:block;color:var(--muted);font-size:.8rem;line-height:1.3}
+.brand b{font-family:var(--display);font-weight:500;font-size:1.1rem}
+.seg{display:inline-flex;background:var(--track);border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--muted);padding:6px 14px;border-radius:999px;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+
+.btn{border:0;border-radius:12px;padding:11px 20px;background:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.ghost{background:var(--accent-soft);color:var(--accent)}
+.btn.big{padding:14px 26px;font-size:1.05rem}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.note{background:var(--accent-soft);border-radius:12px;padding:10px 14px;font-size:.92rem}
+.note.warn{background:var(--warn-soft);color:var(--warn)} .note.bad{background:var(--bad-soft);color:var(--bad)}
+
+/* ---------- form ---------- */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.steps button{border:0;background:transparent;text-align:left;padding:0;color:var(--muted);display:flex;flex-direction:column;gap:6px;font-size:.82rem;min-width:0}
+.steps button i{display:block;height:6px;border-radius:3px;background:var(--track)}
+.steps button.done i{background:var(--accent-soft)} .steps button.on i{background:var(--accent)}
+.steps button.on{color:var(--ink);font-weight:600}
+.steps button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+fieldset{border:0;padding:0;margin:0;min-width:0;display:flex;flex-direction:column;gap:8px}
+legend,.lab{padding:0;font-weight:500;font-size:.95rem;margin-bottom:6px}
+.fields{display:flex;flex-direction:column;gap:20px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px}
+.inp{display:flex;align-items:center;gap:8px}
+input[type=text],input[type=number],input[type=time]{width:100%;min-width:0;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.inp em{font-style:normal;color:var(--muted);font-size:.9rem;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative;display:inline-flex}
+.chip input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.chip span{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 14px;font-size:.93rem;line-height:1.4}
+.chip input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+.chip input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.range{display:flex;align-items:center;gap:12px}
+.range input{flex:1;min-width:0;accent-color:var(--accent)}
+.range output{font-family:var(--display);min-width:5.5em;text-align:right;font-variant-numeric:tabular-nums}
+.group{border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:16px}
+.group>h3{display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--c)}
+.nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.err{color:var(--bad);font-size:.9rem}
+.promise{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;list-style:none;padding:0;margin:0;font-size:.9rem}
+.promise li{display:flex;gap:8px;align-items:flex-start;color:var(--muted)}
+.promise b{color:var(--ink);font-weight:500;display:block}
+
+/* ---------- plan ---------- */
+.now{display:grid;grid-template-columns:minmax(0,280px) minmax(0,1fr);gap:20px;align-items:center}
+@media (max-width:640px){.now{grid-template-columns:1fr}}
+.flower{width:100%;max-width:300px;margin:0 auto;display:block}
+.flower text{font-family:var(--body);fill:var(--muted);font-size:11px}
+.flower .big{font-family:var(--display);font-size:30px;fill:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{background:var(--bg);border-radius:14px;padding:12px 14px;min-width:0}
+.tile .k{font-size:.82rem;color:var(--muted)}
+.tile .v{font-family:var(--display);font-size:1.5rem;line-height:1.25;font-variant-numeric:tabular-nums}
+.tile .v small{font-family:var(--body);font-size:.8rem;color:var(--muted)}
+.pill{display:inline-block;border-radius:999px;padding:1px 10px;font-size:.8rem;font-weight:600;white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)}
+.scale{position:relative;height:8px;border-radius:4px;margin:10px 0 2px;display:flex;overflow:visible}
+.scale i{display:block;height:100%}
+.scale i:first-child{border-radius:4px 0 0 4px} .scale i:nth-last-child(2){border-radius:0 4px 4px 0}
+.scale b{position:absolute;top:-4px;width:4px;height:16px;border-radius:2px;background:var(--ink);transform:translateX(-2px)}
+.prow{display:grid;grid-template-columns:8.5em minmax(0,1fr) 5.2em;gap:4px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.prow:first-child{border-top:0}
+.prow .nm{display:flex;align-items:center;gap:8px;font-weight:500}
+.prow .bar{height:8px;background:var(--track);border-radius:4px;overflow:hidden}
+.prow .bar i{display:block;height:100%;background:var(--c);border-radius:4px}
+.prow .st{text-align:right}
+.prow .fd{grid-column:1/-1;font-size:.9rem;color:var(--muted)}
+.risks{display:flex;flex-direction:column}
+.risk{padding:14px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.risk:first-child{border-top:0;padding-top:0}
+.risk .hd{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.risk .gain{color:var(--good);font-size:.92rem}
+.focus{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.fcard{border:2px solid var(--c);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.fcard .tag{color:var(--c);font-weight:600;font-size:.85rem;display:flex;gap:6px;align-items:center}
+
+.strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.strip button{border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.strip button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.strip .dn{font-family:var(--display);font-size:1rem}
+.strip .ty{width:22px;height:22px;border-radius:50%;border:2px solid var(--p-move);display:grid;place-items:center;color:var(--card)}
+.strip .ty.a{background:var(--p-move)} .strip .ty.s{background:var(--ink);border-color:var(--ink)} .strip .ty.c{background:linear-gradient(90deg,var(--p-move) 50%,var(--ink) 50%);border-color:transparent}
+.strip .mn{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.82rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:50%;border:2px solid var(--p-move);display:inline-block}
+.day{display:flex;flex-direction:column;gap:14px}
+.dayhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.blk{border-left:4px solid var(--c);padding-left:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.blk>h3{color:var(--c);display:flex;gap:8px;align-items:center}
+.task{display:flex;gap:10px;align-items:flex-start}
+.task input{width:20px;height:20px;margin:3px 0 0;flex:none;accent-color:var(--accent)}
+.task input:checked+div{opacity:.6}
+.task div{min-width:0}
+.exs{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.ex{background:var(--bg);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:2px;min-width:0;--gc:var(--p-move)}
+.ex svg{width:100%;height:auto;display:block}
+.ex b{font-weight:500;font-size:.92rem;line-height:1.35}
+.ex .dose{font-family:var(--display);color:var(--p-move);font-size:.95rem}
+.ex details{font-size:.82rem;color:var(--muted)} .ex summary{cursor:pointer}
+.ex ul{margin:4px 0 0;padding-left:16px}
+.meal{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:center}
+.meal svg{width:64px;height:64px}
+.meal .parts{font-size:.85rem;color:var(--muted)}
+.meal .parts i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px}
+.breath{display:flex;align-items:center;gap:14px}
+.breath .ring{width:64px;height:64px;border-radius:50%;background:var(--p-mind);opacity:.85;flex:none;animation:breathe 10s ease-in-out infinite}
+@keyframes breathe{0%{transform:scale(.55)}40%{transform:scale(1)}100%{transform:scale(.55)}}
+@media (prefers-reduced-motion:reduce){.breath .ring{animation:none}}
+.ladder{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.ladder div{background:var(--bg);border-radius:12px;padding:10px;text-align:center;min-width:0}
+.ladder .v{font-family:var(--display);font-size:1.3rem;font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.86rem;min-width:640px}
+th,td{text-align:left;vertical-align:top;padding:8px;border-bottom:1px solid var(--line)}
+th{font-weight:600;white-space:nowrap}
+details.more>summary{cursor:pointer;font-weight:500}
+.refs{margin:0;padding-left:18px;font-size:.86rem;color:var(--muted)}
+.refs a{color:var(--accent);word-break:break-word}
+.prog{height:8px;border-radius:4px;background:var(--track);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);transition:width .3s}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true" id="logo"></svg>
+      <div><b>แผนสุขภาพดีของฉัน</b><small>ตามหลักเวชศาสตร์วิถีชีวิต 6 เสาหลัก</small></div>
+    </div>
+    <div class="seg" role="group" aria-label="สลับหน้า">
+      <button type="button" id="tabForm" aria-pressed="true">กรอกข้อมูล</button>
+      <button type="button" id="tabPlan" aria-pressed="false">แผนของฉัน</button>
+    </div>
+  </header>
+
+  <main id="viewForm" class="panel">
+    <div>
+      <h1>ตอบ 4 หน้าสั้น ๆ แล้วรับแผน 7 วันของคุณ</h1>
+      <p class="muted">ใช้เวลาราว 3 นาที ส่วนใหญ่เป็นการแตะเลือก ข้อมูลเก็บอยู่ในเครื่องของคุณเท่านั้น</p>
+    </div>
+    <p class="note" id="exampleNote">ข้อมูลที่เห็นอยู่เป็น<b>ตัวอย่าง</b> (คุณต้น อายุ 42 ปี พนักงานออฟฟิศ) แก้เป็นของคุณเองได้ทุกช่อง หรือกด “สร้างแผน” เพื่อดูแผนตัวอย่างก่อน</p>
+    <div class="steps" id="steps"></div>
+    <form id="form" novalidate><div id="stepBody" class="fields"></div></form>
+    <p class="err" id="err" hidden></p>
+    <div class="nav">
+      <button type="button" class="btn ghost" id="back">ย้อนกลับ</button>
+      <span style="display:flex;gap:10px;flex-wrap:wrap">
+        <button type="button" class="btn ghost" id="next">ถัดไป</button>
+        <button type="button" class="btn" id="make">สร้างแผนของฉัน</button>
+      </span>
+    </div>
+    <ul class="promise">
+      <li><span class="dot" style="--c:var(--p-move);margin-top:8px"></span><span><b>สถานะร่างกายตอนนี้</b>ดัชนีมวลกาย รอบเอว ความดัน และคะแนน 6 เสาหลัก</span></li>
+      <li><span class="dot" style="--c:var(--p-avoid);margin-top:8px"></span><span><b>ความเสี่ยงถ้าไม่ปรับ</b>พร้อมสิ่งที่ได้คืนเมื่อปรับ</span></li>
+      <li><span class="dot" style="--c:var(--p-food);margin-top:8px"></span><span><b>ตาราง 7 วัน</b>เมนูอาหาร ท่าออกกำลังกายพร้อมภาพสาธิต การนอน และการดูแลใจ</span></li>
+    </ul>
+  </main>
+
+  <main id="viewPlan" hidden></main>
+
+  <footer class="small muted">ต้นแบบเพื่อการออกแบบ ใช้ส่งเสริมสุขภาพทั่วไป ไม่ใช่การวินิจฉัยหรือการรักษา ผู้มีโรคประจำตัว ตั้งครรภ์ หรือมีอาการผิดปกติ ควรปรึกษาแพทย์ก่อนเริ่มแผน</footer>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const DAYS = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
+const DAYFULL = ["วันจันทร์", "วันอังคาร", "วันพุธ", "วันพฤหัสบดี", "วันศุกร์", "วันเสาร์", "วันอาทิตย์"];
+const PILLARS = [
+  { k: "food", n: "อาหาร", full: "กินอาหารสุขภาพ" },
+  { k: "move", n: "ขยับกาย", full: "กิจกรรมทางกาย" },
+  { k: "sleep", n: "การนอน", full: "นอนหลับพักฟื้น" },
+  { k: "mind", n: "จิตใจ", full: "จัดการความเครียด" },
+  { k: "avoid", n: "สารเสี่ยง", full: "เลี่ยงสารเสี่ยง" },
+  { k: "social", n: "สัมพันธ์", full: "ความสัมพันธ์เชิงบวก" },
+];
+const P = Object.fromEntries(PILLARS.map(p => [p.k, p]));
+const pc = k => `var(--p-${k})`;
+
+/* ================= 1) แบบฟอร์ม ================= */
+const STEPS = [
+  { t: "ร่างกาย", groups: [{ f: [
+    { row: [{ id: "name", l: "ชื่อเล่น (ไม่บังคับ)", type: "text" }, { id: "age", l: "อายุ", type: "num", u: "ปี", min: 18, max: 100 }] },
+    { id: "sex", l: "เพศ", type: "one", o: [["m", "ชาย"], ["f", "หญิง"]] },
+    { row: [{ id: "height", l: "ส่วนสูง", type: "num", u: "ซม.", min: 120, max: 220 }, { id: "weight", l: "น้ำหนัก", type: "num", u: "กก.", min: 30, max: 250 }, { id: "waist", l: "รอบเอว ระดับสะดือ (ถ้าทราบ)", type: "num", u: "ซม.", min: 40, max: 200 }] },
+    { row: [{ id: "sbp", l: "ความดันตัวบน (ถ้าทราบ)", type: "num", u: "มม.ปรอท", min: 70, max: 260 }, { id: "dbp", l: "ความดันตัวล่าง", type: "num", u: "มม.ปรอท", min: 40, max: 160 }] },
+    { id: "cond", l: "โรคหรือภาวะที่มีอยู่ (เลือกได้หลายข้อ ไม่มีให้เว้นว่าง)", type: "many", o: [["dm", "เบาหวาน"], ["ht", "ความดันโลหิตสูง"], ["lipid", "ไขมันในเลือดสูง"], ["heart", "โรคหัวใจ"], ["joint", "ปวดเข่าหรือปวดหลัง"], ["preg", "ตั้งครรภ์"]] },
+    { id: "symptom", l: "เคยเจ็บแน่นหน้าอก หน้ามืด หรือเหนื่อยผิดปกติเวลาออกแรงหรือไม่", type: "one", o: [["n", "ไม่เคย"], ["y", "เคย"]] },
+  ] }] },
+  { t: "วิถีชีวิต 6 ด้าน", groups: [
+    { p: "food", f: [
+      { id: "veg", l: "ใน 1 วัน กินผักได้ราวครึ่งจานกี่มื้อ", type: "one", o: [["0", "ไม่มีเลย"], ["1", "1 มื้อ"], ["2", "2 มื้อ"], ["3", "ทุกมื้อ"]] },
+      { id: "sweet", l: "เครื่องดื่มรสหวาน เช่น ชานม กาแฟเย็น น้ำอัดลม", type: "one", o: [["0", "ไม่ดื่ม"], ["1", "วันละ 1 แก้ว"], ["2", "2 แก้วขึ้นไป"]] },
+      { id: "fried", l: "ของทอด อาหารแปรรูป หรืออาหารรสเค็มจัด", type: "one", o: [["0", "แทบไม่กิน"], ["1", "1–3 วันต่อสัปดาห์"], ["2", "4 วันขึ้นไป"]] },
+    ] },
+    { p: "move", f: [
+      { id: "actDays", l: "ขยับร่างกายจนเหนื่อยพอพูดเป็นประโยคได้ กี่วันต่อสัปดาห์", type: "range", min: 0, max: 7, step: 1, u: "วัน" },
+      { id: "actMin", l: "ครั้งละประมาณกี่นาที", type: "one", o: [["10", "10"], ["20", "20"], ["30", "30"], ["45", "45"], ["60", "60 ขึ้นไป"]] },
+      { id: "strength", l: "ฝึกกล้ามเนื้อ (ยกน้ำหนัก บอดี้เวท ยางยืด) กี่วันต่อสัปดาห์", type: "one", o: [["0", "ไม่ได้ทำ"], ["1", "1 วัน"], ["2", "2 วันขึ้นไป"]] },
+      { id: "sit", l: "นั่งหรือนอนเล่นรวมต่อวัน (ไม่นับเวลานอนหลับ)", type: "one", o: [["lt4", "น้อยกว่า 4 ชม."], ["4to8", "4–8 ชม."], ["gt8", "มากกว่า 8 ชม."]] },
+    ] },
+    { p: "sleep", f: [
+      { id: "sleepH", l: "นอนหลับเฉลี่ยคืนละ", type: "range", min: 3, max: 11, step: 0.5, u: "ชม." },
+      { id: "sleepQ", l: "ตื่นมาแล้วรู้สึกอย่างไร", type: "one", o: [["good", "สดชื่น"], ["fair", "พอไหว"], ["poor", "ไม่สดชื่น ง่วงระหว่างวัน"]] },
+    ] },
+    { p: "mind", f: [{ id: "stress", l: "ช่วง 2 สัปดาห์นี้ เครียดระดับไหน (1 น้อยมาก – 5 มากที่สุด)", type: "range", min: 1, max: 5, step: 1, u: "จาก 5" }] },
+    { p: "avoid", f: [
+      { id: "smoke", l: "บุหรี่หรือบุหรี่ไฟฟ้า", type: "one", o: [["no", "ไม่สูบ"], ["ex", "เลิกแล้ว"], ["yes", "ยังสูบ"]] },
+      { id: "alcohol", l: "เครื่องดื่มแอลกอฮอล์", type: "one", o: [["no", "ไม่ดื่ม"], ["rare", "นาน ๆ ครั้ง"], ["weekly", "ทุกสัปดาห์"], ["daily", "เกือบทุกวัน"]] },
+    ] },
+    { p: "social", f: [{ id: "social", l: "ได้พูดคุยหรือใช้เวลากับคนที่ไว้ใจบ่อยแค่ไหน", type: "one", o: [["daily", "เกือบทุกวัน"], ["weekly", "ทุกสัปดาห์"], ["rare", "นาน ๆ ครั้ง"]] }] },
+  ] },
+  { t: "งานและความสะดวก", groups: [{ f: [
+    { id: "job", l: "ลักษณะงานหลัก", type: "one", o: [["desk", "นั่งโต๊ะ / ขับรถ"], ["stand", "ยืนหรือเดินเกือบทั้งวัน"], ["labor", "ใช้แรงกาย"], ["shift", "เข้ากะกลางคืน"], ["home", "งานบ้าน / เกษียณ"]] },
+    { row: [{ id: "wake", l: "ปกติตื่นนอนกี่โมง", type: "time" }] },
+    { id: "slot", l: "ช่วงเวลาที่สะดวกออกกำลังกาย", type: "one", o: [["morning", "เช้า"], ["noon", "พักกลางวัน"], ["evening", "หลังเลิกงาน"], ["night", "ค่ำ"]] },
+    { id: "time", l: "มีเวลาให้ครั้งละกี่นาที", type: "one", o: [["10", "10"], ["20", "20"], ["30", "30"], ["45", "45 ขึ้นไป"]] },
+    { id: "days", l: "วันที่สะดวก (ไม่เลือก = ได้ทุกวัน)", type: "many", o: DAYS.map((d, i) => [String(i), d]) },
+    { id: "place", l: "สถานที่ที่ไปได้ง่ายที่สุด", type: "one", o: [["home", "ในบ้าน"], ["park", "สวนหรือลานกีฬา"], ["gym", "ฟิตเนส / สระว่ายน้ำ"]] },
+    { id: "foodSrc", l: "อาหารส่วนใหญ่มาจากไหน", type: "one", o: [["cook", "ทำกินเอง"], ["shop", "ร้านตามสั่ง / ข้าวแกง"], ["cvs", "ร้านสะดวกซื้อ"]] },
+    { id: "diet", l: "รูปแบบการกิน", type: "one", o: [["any", "ทั่วไป"], ["veg", "มังสวิรัติ (กินไข่ นม)"]] },
+  ] }] },
+  { t: "เป้าหมาย", groups: [{ f: [
+    { id: "goal", l: "อยากได้อะไรจากแผนนี้มากที่สุด", type: "one", o: [["weight", "ลดน้ำหนัก ลดพุง"], ["strong", "แข็งแรง มีแรงมากขึ้น"], ["sleep", "นอนหลับดีขึ้น"], ["stress", "เครียดน้อยลง"], ["disease", "คุมโรคประจำตัว"], ["general", "สุขภาพดีโดยรวม"]] },
+    { id: "ready", l: "ตอนนี้พร้อมแค่ไหน", type: "one", o: [["think", "ยังลังเล ขอเริ่มน้อย ๆ"], ["ready", "พร้อมเริ่มสัปดาห์นี้"], ["doing", "ทำอยู่แล้ว อยากทำให้ดีขึ้น"]] },
+  ] }] },
+];
+const EXAMPLE = { name: "ต้น", age: 42, sex: "m", height: 172, weight: 82, waist: 96, sbp: 134, dbp: 86, cond: ["lipid"], symptom: "n",
+  veg: "1", sweet: "1", fried: "2", actDays: 1, actMin: "20", strength: "0", sit: "gt8", sleepH: 6, sleepQ: "fair", stress: 3,
+  smoke: "no", alcohol: "weekly", social: "weekly", job: "desk", wake: "06:00", slot: "evening", time: "30", days: ["0", "2", "4", "5", "6"],
+  place: "park", foodSrc: "shop", diet: "any", goal: "weight", ready: "ready" };
+
+const state = { step: 0, d: { ...EXAMPLE }, checks: {}, day: 0, isExample: true };
+try {
+  const s = JSON.parse(localStorage.getItem("lmplan.v1") || "null");
+  if (s && s.d) { state.d = { ...EXAMPLE, ...s.d }; state.checks = s.checks || {}; state.isExample = false; }
+} catch (e) {}
+const save = () => { try { localStorage.setItem("lmplan.v1", JSON.stringify({ d: state.d, checks: state.checks })); } catch (e) {} };
+
+function fieldHTML(f) {
+  const v = state.d[f.id];
+  if (f.row) return `<div class="row">${f.row.map(fieldHTML).join("")}</div>`;
+  if (f.type === "text" || f.type === "num" || f.type === "time")
+    return `<div><label class="lab" for="${f.id}">${f.l}</label><div class="inp"><input id="${f.id}" name="${f.id}" type="${f.type === "num" ? "number" : f.type}" ${f.type === "num" ? `inputmode="decimal" min="${f.min}" max="${f.max}"` : ""} value="${esc(v ?? "")}">${f.u ? `<em>${f.u}</em>` : ""}</div></div>`;
+  if (f.type === "range")
+    return `<div><label class="lab" for="${f.id}">${f.l}</label><div class="range"><input id="${f.id}" name="${f.id}" type="range" min="${f.min}" max="${f.max}" step="${f.step}" value="${v}"><output for="${f.id}">${v} ${f.u}</output></div></div>`;
+  const multi = f.type === "many";
+  return `<fieldset><legend>${f.l}</legend><div class="chips">${f.o.map(([val, lab]) =>
+    `<label class="chip"><input type="${multi ? "checkbox" : "radio"}" id="${f.id}-${val}" name="${f.id}" value="${val}" ${(multi ? (v || []).includes(val) : v === val) ? "checked" : ""}><span>${lab}</span></label>`).join("")}</div></fieldset>`;
+}
+function renderStep() {
+  const st = STEPS[state.step];
+  $("#steps").innerHTML = STEPS.map((s, i) => `<button type="button" data-step="${i}" class="${i === state.step ? "on" : i < state.step ? "done" : ""}"><i></i><span>${i + 1}. ${s.t}</span></button>`).join("");
+  $("#stepBody").innerHTML = st.groups.map(g => g.p
+    ? `<div class="group"><h3><span class="dot" style="--c:${pc(g.p)}"></span>${P[g.p].full}</h3>${g.f.map(fieldHTML).join("")}</div>`
+    : g.f.map(fieldHTML).join("")).join("");
+  $("#back").hidden = state.step === 0;
+  $("#next").hidden = state.step === STEPS.length - 1;
+  $("#exampleNote").hidden = !state.isExample;
+}
+function readField(el) {
+  const id = el.name, d = state.d;
+  if (el.type === "checkbox") d[id] = [...document.querySelectorAll(`input[name="${id}"]:checked`)].map(x => x.value);
+  else if (el.type === "number" || el.type === "range") d[id] = el.value === "" ? null : +el.value;
+  else d[id] = el.value;
+  if (el.type === "range") el.nextElementSibling.textContent = `${el.value} ${el.nextElementSibling.textContent.replace(/^[\d.]+\s*/, "")}`;
+  state.isExample = false; $("#exampleNote").hidden = true; save();
+}
+$("#form").addEventListener("input", e => e.target.name && readField(e.target));
+$("#form").addEventListener("submit", e => e.preventDefault());
+$("#steps").addEventListener("click", e => { const b = e.target.closest("[data-step]"); if (b) { state.step = +b.dataset.step; renderStep(); } });
+$("#back").onclick = () => { state.step--; renderStep(); };
+$("#next").onclick = () => { state.step++; renderStep(); window.scrollTo(0, 0); };
+function validate() {
+  const d = state.d, bad = [];
+  if (!(d.age >= 18 && d.age <= 100)) bad.push("อายุ 18–100 ปี");
+  if (!(d.height >= 120 && d.height <= 220)) bad.push("ส่วนสูง 120–220 ซม.");
+  if (!(d.weight >= 30 && d.weight <= 250)) bad.push("น้ำหนัก 30–250 กก.");
+  return bad;
+}
+$("#make").onclick = () => {
+  const bad = validate();
+  if (bad.length) { state.step = 0; renderStep(); $("#err").hidden = false; $("#err").textContent = "กรุณากรอกให้ครบในหน้าแรก: " + bad.join(", "); return; }
+  $("#err").hidden = true; state.checks = {}; state.day = 0; save(); go("plan");
+};
+
+/* ================= 2) วิเคราะห์ ================= */
+function analyze(d) {
+  const hm = d.height / 100, bmi = d.weight / (hm * hm), cond = d.cond || [];
+  const bmiCat = bmi < 18.5 ? ["น้ำหนักน้อย", "warn"] : bmi < 23 ? ["สมส่วน", "good"] : bmi < 25 ? ["น้ำหนักเกิน", "warn"] : bmi < 30 ? ["อ้วนระดับ 1", "bad"] : ["อ้วนระดับ 2", "bad"];
+  const waistMax = d.height / 2, waistHigh = d.waist ? d.waist > waistMax : null;
+  let bp = null;
+  if (d.sbp && d.dbp) bp = d.sbp >= 140 || d.dbp >= 90 ? ["อยู่ในเกณฑ์สูง", "bad"] : d.sbp >= 130 || d.dbp >= 85 ? ["เริ่มสูง", "warn"] : ["ปกติ", "good"];
+  const wkMin = d.actDays * +d.actMin, str = +d.strength;
+  const s = {};
+  s.food = [0, 15, 30, 40][+d.veg] + [30, 15, 0][+d.sweet] + [30, 15, 0][+d.fried];
+  s.move = Math.round(Math.min(1, wkMin / 150) * 60) + [0, 10, 20][str] + { lt4: 20, "4to8": 10, gt8: 0 }[d.sit];
+  s.sleep = (d.sleepH >= 7 && d.sleepH <= 9 ? 60 : d.sleepH >= 6 && d.sleepH <= 10 ? 35 : 10) + { good: 40, fair: 20, poor: 0 }[d.sleepQ];
+  s.mind = [0, 100, 80, 55, 30, 10][d.stress];
+  s.avoid = { no: 50, ex: 45, yes: 0 }[d.smoke] + { no: 50, rare: 35, weekly: 15, daily: 0 }[d.alcohol];
+  s.social = { daily: 100, weekly: 70, rare: 30 }[d.social];
+  const overall = Math.round(PILLARS.reduce((t, p) => t + s[p.k], 0) / 6);
+  const joint = cond.includes("joint");
+  const caution = d.symptom === "y" || cond.includes("heart") || cond.includes("preg") || d.sbp >= 160 || d.dbp >= 100;
+  const level = wkMin < 75 || d.age >= 65 || bmi >= 30 || caution ? 0 : wkMin >= 150 && str >= 2 && !joint ? 2 : 1;
+
+  // พลังงานโดยประมาณ (Mifflin-St Jeor)
+  let kcal = null, protein = null;
+  if (!cond.includes("preg")) {
+    const bmr = 10 * d.weight + 6.25 * d.height - 5 * d.age + (d.sex === "m" ? 5 : -161);
+    const af = 1.3 + (wkMin >= 150 ? 0.1 : 0) + (d.job === "stand" ? 0.15 : d.job === "labor" ? 0.3 : 0);
+    kcal = bmr * af;
+    if (d.goal === "weight" && bmi >= 23) kcal = Math.max(kcal - 500, d.sex === "m" ? 1500 : 1200);
+    kcal = Math.round(kcal / 50) * 50;
+    protein = Math.round(Math.min(d.weight, 25 * hm * hm) * (d.age >= 60 ? 1.2 : 1.0) / 5) * 5;
+  }
+
+  const find = {
+    food: `ผักครึ่งจาน ${d.veg === "3" ? "ทุกมื้อ" : d.veg + " มื้อต่อวัน"} · เครื่องดื่มหวาน ${["ไม่ดื่ม", "วันละ 1 แก้ว", "วันละ 2 แก้วขึ้นไป"][+d.sweet]} · ของทอดหรือเค็มจัด ${["แทบไม่กิน", "1–3 วันต่อสัปดาห์", "4 วันขึ้นไปต่อสัปดาห์"][+d.fried]}`,
+    move: `ขยับระดับปานกลาง ${wkMin} นาทีต่อสัปดาห์ (แนะนำ 150 ขึ้นไป) · ฝึกกล้ามเนื้อ ${["ยังไม่ได้ทำ", "1 วัน", "2 วันขึ้นไป"][str]} (แนะนำ 2 วัน)`,
+    sleep: `นอน ${d.sleepH} ชั่วโมงต่อคืน (แนะนำ 7–9) · ตื่นมา${{ good: "สดชื่น", fair: "พอไหว", poor: "ไม่สดชื่น" }[d.sleepQ]}`,
+    mind: `ความเครียด ${d.stress} จาก 5`,
+    avoid: `บุหรี่: ${{ no: "ไม่สูบ", ex: "เลิกแล้ว", yes: "ยังสูบ" }[d.smoke]} · แอลกอฮอล์: ${{ no: "ไม่ดื่ม", rare: "นาน ๆ ครั้ง", weekly: "ทุกสัปดาห์", daily: "เกือบทุกวัน" }[d.alcohol]}`,
+    social: `ได้ใช้เวลากับคนที่ไว้ใจ${{ daily: "เกือบทุกวัน", weekly: "ทุกสัปดาห์", rare: "นาน ๆ ครั้ง" }[d.social]}`,
+  };
+
+  // ความเสี่ยงถ้าไม่ปรับ
+  const R = [], add = (lv, p, t, why, gain) => R.push({ lv, p, t, why, gain });
+  if (bmi >= 25 || waistHigh) add(bmi >= 30 || (bmi >= 25 && waistHigh) ? 2 : 1, "food", "เบาหวานชนิดที่ 2 ความดันโลหิตสูง ไขมันพอกตับ",
+    `ดัชนีมวลกาย ${bmi.toFixed(1)}${waistHigh ? ` และรอบเอว ${d.waist} ซม. เกินครึ่งหนึ่งของส่วนสูง (${waistMax} ซม.)` : ""} บ่งชี้ไขมันสะสมในช่องท้อง`,
+    "ลดน้ำหนักลง 5–7% ร่วมกับขยับร่างกายสม่ำเสมอ ช่วยลดโอกาสเป็นเบาหวานในกลุ่มเสี่ยงได้ชัดเจน");
+  else if (bmi >= 23) add(1, "food", "น้ำหนักเกินและมีแนวโน้มอ้วนลงพุง", `ดัชนีมวลกาย ${bmi.toFixed(1)} สูงกว่าเกณฑ์สมส่วนของคนเอเชีย (18.5–22.9)`, "คุมน้ำหนักไม่ให้เพิ่มตั้งแต่ตอนนี้ ง่ายกว่าลดทีหลังมาก");
+  if (bmi < 18.5) add(1, "food", "ขาดสารอาหาร กล้ามเนื้อน้อย กระดูกบาง", `ดัชนีมวลกาย ${bmi.toFixed(1)} ต่ำกว่าเกณฑ์`, "กินโปรตีนให้พอทุกมื้อและฝึกกล้ามเนื้อ ช่วยเพิ่มมวลกล้ามเนื้อและกระดูก");
+  if (bp && bp[1] !== "good") add(bp[1] === "bad" ? 2 : 1, "food", "โรคหลอดเลือดสมอง โรคหัวใจ และไตเสื่อม", `ความดันโลหิต ${d.sbp}/${d.dbp} ${bp[0]}`, "ลดเค็ม ขยับร่างกาย นอนพอ และลดน้ำหนัก ช่วยให้ความดันลดลงได้ ควรวัดซ้ำและพบแพทย์หากยังสูง");
+  if (wkMin < 150) add(wkMin < 60 ? 2 : 1, "move", "โรคหัวใจและหลอดเลือด เบาหวาน มะเร็งบางชนิด และภาวะซึมเศร้า", `ขยับร่างกายเพียง ${wkMin} นาทีต่อสัปดาห์ ต่ำกว่าคำแนะนำ 150 นาที`, "ทุกนาทีที่เพิ่มมีประโยชน์ คนที่เริ่มจากไม่ขยับเลยได้ประโยชน์มากที่สุด");
+  if (d.sit === "gt8" && wkMin < 150) add(1, "move", "ผลเสียจากการนั่งนาน", "นั่งมากกว่า 8 ชั่วโมงต่อวัน และยังขยับไม่ถึงเกณฑ์", "ลุกขยับทุกชั่วโมง และเพิ่มกิจกรรมทางกาย ช่วยชดเชยผลจากการนั่งนานได้");
+  if (str === 0 && d.age >= 50) add(1, "move", "กล้ามเนื้อลีบ กระดูกพรุน และหกล้ม", `อายุ ${d.age} ปี และยังไม่ได้ฝึกกล้ามเนื้อ`, "ฝึกกล้ามเนื้อสัปดาห์ละ 2 วัน ช่วยรักษาแรงขา การทรงตัว และความหนาแน่นกระดูก");
+  if (d.sleepH < 7) add(d.sleepH < 6 ? 2 : 1, "sleep", "น้ำหนักขึ้น ความดันสูง ภูมิคุ้มกันตก และอุบัติเหตุจากความง่วง", `นอนเฉลี่ย ${d.sleepH} ชั่วโมง น้อยกว่าที่ผู้ใหญ่ควรได้ (อย่างน้อย 7 ชั่วโมง)`, "นอนพอช่วยคุมความหิว อารมณ์ และสมาธิ ทำให้ปรับด้านอื่นง่ายขึ้น");
+  if (d.stress >= 4) add(d.stress === 5 ? 2 : 1, "mind", "นอนไม่หลับ ความดันสูง กินตามอารมณ์ วิตกกังวลและซึมเศร้า", `ความเครียดระดับ ${d.stress} จาก 5`, "ฝึกหายใจช้าหรือทำสมาธิวันละ 5–10 นาที ช่วยลดอาการเครียดและวิตกกังวลได้");
+  if (d.smoke === "yes") add(2, "avoid", "มะเร็งปอด ถุงลมโป่งพอง โรคหัวใจ และหลอดเลือดสมอง", "ยังสูบบุหรี่หรือบุหรี่ไฟฟ้า", "เลิกได้ครบ 1 ปี ความเสี่ยงโรคหลอดเลือดหัวใจลดลงราวครึ่งหนึ่งเมื่อเทียบกับคนที่ยังสูบ");
+  if (d.alcohol === "weekly" || d.alcohol === "daily") add(d.alcohol === "daily" ? 2 : 1, "avoid", "โรคตับ มะเร็งหลายชนิด ความดันสูง และอุบัติเหตุ", `ดื่มแอลกอฮอล์${d.alcohol === "daily" ? "เกือบทุกวัน" : "ทุกสัปดาห์"}`, "ยิ่งดื่มน้อยยิ่งดี เริ่มจากเพิ่มวันปลอดแอลกอฮอล์ในแต่ละสัปดาห์");
+  if (s.food < 50 && bmi < 25 && !waistHigh) add(1, "food", "น้ำตาลและไขมันในเลือดสูง ความดันสูง ท้องผูก", "ผักน้อย และกินหวาน ทอด หรือเค็มบ่อย", "เพิ่มผักให้ได้ครึ่งจาน และลดเครื่องดื่มหวาน เห็นผลกับน้ำหนักและระดับน้ำตาลได้เร็ว");
+  if (d.social === "rare") add(1, "social", "ความเหงา ซึมเศร้า และความจำถดถอยเมื่อสูงวัย", "ได้ใช้เวลากับคนที่ไว้ใจนาน ๆ ครั้ง", "ความสัมพันธ์ที่ดีสัมพันธ์กับอายุที่ยืนยาวขึ้น ใกล้เคียงกับผลของการเลิกบุหรี่");
+  if (d.job === "shift") add(1, "sleep", "นาฬิกาชีวิตรวน เสี่ยงอ้วนลงพุงและนอนไม่พอเรื้อรัง", "ทำงานกะกลางคืน", "จัดเวลานอนให้คงที่ ห้องมืดสนิท และเลี่ยงมื้อหนักหลังเที่ยงคืน ช่วยลดผลกระทบได้");
+  R.sort((a, b) => b.lv - a.lv);
+
+  // เลือก 2 เสาหลักที่ควรเริ่มก่อน
+  const goalP = { weight: "food", strong: "move", sleep: "sleep", stress: "mind", disease: "food", general: null }[d.goal];
+  const focus = PILLARS.map(p => ({ k: p.k, v: s[p.k] - (p.k === goalP ? 15 : 0) })).filter(x => s[x.k] < 75 || x.k === goalP).sort((a, b) => a.v - b.v).slice(0, 2).map(x => x.k);
+  return { bmi, bmiCat, waistMax, waistHigh, bp, wkMin, s, overall, joint, caution, level, kcal, protein, find, risks: R, focus, cond };
+}
+
+/* ================= 3) คลังเนื้อหา ================= */
+const STAND = { h: [60, 14], s: [60, 26], p: [60, 56], k: [61, 75], f: [61, 95], k2: [59, 75], f2: [57, 95], e: [62, 41], w: [63, 55], e2: [58, 41], w2: [57, 55] };
+const pose = (b, o) => Object.assign({}, b, o);
+const EX = {
+  squat: { n: "สควอท", easy: "ลุก-นั่งเก้าอี้", g: 95, a: pose(STAND, { e: [72, 28], w: [84, 28], e2: [70, 30], w2: [82, 30] }),
+    b: { h: [70, 26], s: [64, 37], p: [44, 62], k: [70, 64], f: [64, 95], k2: [68, 66], f2: [60, 95], e: [78, 38], w: [92, 38], e2: [76, 40], w2: [90, 40] },
+    tips: ["เท้ากว้างเท่าไหล่ ย่อเหมือนนั่งเก้าอี้", "หลังตรง น้ำหนักลงส้นเท้า เข่าชี้ตามปลายเท้า"], reps: [["2", "10"], ["3", "12"], ["3", "15"]] },
+  pushup: { n: "วิดพื้น", easy: "วิดผนัง หรือวิดพื้นบนเข่า", g: 80,
+    a: { h: [22, 47], s: [32, 52], p: [68, 61], k: [86, 69], f: [104, 78], k2: [86, 70], f2: [104, 79], e: [33, 65], w: [33, 79], e2: [31, 65], w2: [31, 79] },
+    b: { h: [20, 67], s: [31, 71], p: [68, 74], k: [86, 76], f: [104, 78], k2: [86, 77], f2: [104, 79], e: [46, 67], w: [33, 79], e2: [44, 68], w2: [31, 79] },
+    tips: ["ลำตัวตรงตั้งแต่ศีรษะถึงส้นเท้า", "เกร็งหน้าท้อง ไม่ให้สะโพกตก"], reps: [["2", "6–8"], ["3", "10"], ["3", "12–15"]] },
+  row: { n: "ดึงขวดน้ำเข้าลำตัว", easy: "นั่งดึงยางยืดเข้าหาตัว", g: 95, wt: 1,
+    a: { h: [34, 34], s: [44, 39], p: [72, 54], k: [76, 74], f: [72, 95], k2: [74, 74], f2: [68, 95], e: [45, 54], w: [46, 69], e2: [43, 54], w2: [44, 69] },
+    b: { h: [34, 34], s: [44, 39], p: [72, 54], k: [76, 74], f: [72, 95], k2: [74, 74], f2: [68, 95], e: [60, 38], w: [52, 52], e2: [58, 39], w2: [50, 53] },
+    tips: ["ก้มตัว หลังตรง เข่างอเล็กน้อย", "ดึงศอกไปด้านหลัง บีบสะบัก แล้วผ่อนช้า ๆ"], reps: [["2", "10"], ["3", "12"], ["3", "15"]] },
+  lunge: { n: "ลันจ์", easy: "จับพนักเก้าอี้ ย่อครึ่งเดียว", g: 95, a: pose(STAND, { e: [54, 40], w: [58, 50], e2: [66, 40], w2: [62, 50] }),
+    b: { h: [58, 26], s: [58, 38], p: [58, 66], k: [80, 72], f: [80, 95], k2: [46, 90], f2: [30, 94], e: [52, 52], w: [56, 62], e2: [64, 52], w2: [60, 62] },
+    tips: ["ก้าวยาว 1 ก้าว ย่อจนเข่างอราว 90 องศา", "ดันกลับท่าเริ่ม แล้วสลับขา"], reps: [["2", "8 ต่อข้าง"], ["3", "10 ต่อข้าง"], ["3", "12 ต่อข้าง"]] },
+  bridge: { n: "ยกสะโพก", easy: "ยกขึ้นครึ่งทาง", g: 80,
+    a: { h: [14, 73], s: [26, 76], p: [56, 77], k: [72, 58], f: [86, 79], k2: [70, 59], f2: [84, 79], e: [40, 79], w: [52, 79], e2: [38, 79], w2: [50, 79] },
+    b: { h: [14, 73], s: [27, 74], p: [56, 58], k: [76, 55], f: [86, 79], k2: [74, 56], f2: [84, 79], e: [40, 79], w: [52, 79], e2: [38, 79], w2: [50, 79] },
+    tips: ["นอนหงาย ชันเข่า เท้าราบกับพื้น", "เกร็งก้น ยกสะโพก ค้าง 2 วินาที"], reps: [["2", "12"], ["3", "15"], ["3", "20"]] },
+  press: { n: "ดันขวดน้ำเหนือศีรษะ", easy: "นั่งเก้าอี้ทำ ใช้ขวดเล็ก", g: 95, wt: 1,
+    a: { h: [60, 18], s: [60, 30], p: [60, 58], k: [61, 76], f: [61, 95], k2: [59, 76], f2: [57, 95], e: [74, 34], w: [72, 22], e2: [46, 34], w2: [48, 22] },
+    b: { h: [60, 18], s: [60, 30], p: [60, 58], k: [61, 76], f: [61, 95], k2: [59, 76], f2: [57, 95], e: [70, 18], w: [68, 4], e2: [50, 18], w2: [52, 4] },
+    tips: ["ถือขวดน้ำระดับไหล่ ดันขึ้นจนแขนเกือบตึง", "ไม่แอ่นหลัง เกร็งหน้าท้อง"], reps: [["2", "10"], ["3", "12"], ["3", "15"]] },
+  plank: { n: "แพลงก์", easy: "แพลงก์บนเข่า", g: 80, hold: 1,
+    a: { h: [22, 54], s: [32, 59], p: [70, 63], k: [88, 70], f: [106, 78], k2: [88, 71], f2: [106, 79], e: [32, 78], w: [16, 78], e2: [30, 78], w2: [14, 78] },
+    tips: ["ศอกอยู่ใต้ไหล่ ลำตัวเป็นเส้นตรง", "หายใจปกติ ไม่กลั้นหายใจ"], reps: [["2", "15–20 วินาที"], ["3", "30–45 วินาที"], ["3", "60 วินาที"]] },
+  birddog: { n: "เบิร์ดด็อก", easy: "เหยียดเฉพาะแขน หรือเฉพาะขา", g: 80,
+    a: { h: [26, 45], s: [36, 51], p: [72, 51], k: [72, 79], f: [92, 79], k2: [70, 79], f2: [90, 79], e: [36, 65], w: [36, 79], e2: [34, 65], w2: [34, 79] },
+    b: { h: [26, 45], s: [36, 51], p: [72, 51], k: [90, 51], f: [108, 50], k2: [70, 79], f2: [90, 79], e: [22, 48], w: [8, 46], e2: [34, 65], w2: [34, 79] },
+    tips: ["เหยียดแขนกับขาฝั่งตรงข้าม ค้าง 3 วินาที", "ลำตัวนิ่ง ไม่บิดสะโพก"], reps: [["2", "8 ต่อข้าง"], ["3", "10 ต่อข้าง"], ["3", "12 ต่อข้าง"]] },
+  walk: { n: "เดินเร็ว", g: 95,
+    a: { h: [62, 14], s: [61, 26], p: [60, 56], k: [68, 74], f: [74, 95], k2: [54, 76], f2: [46, 93], e: [54, 40], w: [50, 52], e2: [68, 40], w2: [74, 50] },
+    b: { h: [62, 14], s: [61, 26], p: [60, 56], k: [54, 76], f: [46, 93], k2: [68, 74], f2: [74, 95], e: [68, 40], w: [74, 50], e2: [54, 40], w2: [50, 52] },
+    tips: ["เร็วจนพูดเป็นประโยคได้ แต่ร้องเพลงไม่ไหว", "แกว่งแขน ก้าวยาวพอดี มองตรง"] },
+  march: { n: "เดินย่ำเท้าอยู่กับที่", g: 95, a: pose(STAND, {}),
+    b: pose(STAND, { k: [75, 58], f: [72, 78], e: [56, 41], w: [50, 50], e2: [66, 40], w2: [74, 34] }),
+    tips: ["ยกเข่าสูงเท่าที่สบาย แกว่งแขนสลับ", "เปิดเพลงที่ชอบ ทำตามจังหวะ"] },
+  jack: { n: "ก้าวตบ / กระโดดตบ", g: 95, a: pose(STAND, {}),
+    b: { h: [60, 14], s: [60, 26], p: [60, 56], k: [70, 75], f: [76, 95], k2: [50, 75], f2: [44, 95], e: [72, 16], w: [80, 4], e2: [48, 16], w2: [40, 4] },
+    tips: ["ปวดเข่าหรือน้ำหนักมาก ใช้ก้าวออกข้างแทนการกระโดด", "ลงเท้าเบา ๆ งอเข่าเล็กน้อย"] },
+  balance: { n: "ยืนขาเดียว", easy: "จับพนักเก้าอี้", g: 95, a: pose(STAND, {}),
+    b: pose(STAND, { k: [73, 60], f: [65, 77], e: [70, 38], w: [82, 44] }),
+    tips: ["ยืนใกล้เก้าอี้หรือผนังเพื่อความปลอดภัย", "มองจุดนิ่งข้างหน้า สลับข้าง"] },
+  stretch: { n: "ยืดเหยียด", g: 95, a: pose(STAND, { e: [65, 13], w: [63, 1], e2: [55, 13], w2: [57, 1] }),
+    b: { h: [84, 47], s: [74, 40], p: [54, 54], k: [56, 75], f: [58, 95], k2: [54, 75], f2: [54, 95], e: [78, 57], w: [76, 73], e2: [76, 57], w2: [73, 73] },
+    tips: ["ยืดช้า ๆ ค้างท่าละ 15–30 วินาที ไม่กระตุก", "ตึงได้ แต่ต้องไม่เจ็บ"] },
+};
+const lerp = (a, b, t) => { if (!b) return a; const o = {}; for (const k in a) o[k] = [a[k][0] + (b[k][0] - a[k][0]) * t, a[k][1] + (b[k][1] - a[k][1]) * t]; return o; };
+function stick(pz, ground, wt) {
+  const L = (a, b, c) => `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" style="stroke:${c}"/>`;
+  const far = "var(--muted)", near = "var(--gc)";
+  const bottle = w => wt ? `<rect x="${(w[0] - 3).toFixed(1)}" y="${(w[1] - 6).toFixed(1)}" width="6" height="12" rx="2" style="fill:var(--p-sleep)"/>` : "";
+  return `<line x1="4" y1="${ground + 3}" x2="116" y2="${ground + 3}" style="stroke:var(--line);stroke-width:2;stroke-linecap:round"/>
+  <g style="stroke-width:5;stroke-linecap:round;fill:none">${L(pz.p, pz.k2, far)}${L(pz.k2, pz.f2, far)}${L(pz.s, pz.e2, far)}${L(pz.e2, pz.w2, far)}${L(pz.s, pz.p, near)}${L(pz.p, pz.k, near)}${L(pz.k, pz.f, near)}${L(pz.s, pz.e, near)}${L(pz.e, pz.w, near)}</g>
+  <circle cx="${pz.h[0].toFixed(1)}" cy="${pz.h[1].toFixed(1)}" r="7" style="fill:var(--bg);stroke:${near};stroke-width:4"/>${bottle(pz.w2)}${bottle(pz.w)}`;
+}
+
+// เมนู: src c=ทำเอง s=ร้านตามสั่ง v=ร้านสะดวกซื้อ, p=[ผัก-ผลไม้, ข้าว-แป้ง, โปรตีน]
+const M = (n, src, p, tip, veg) => ({ n, src, p, tip, veg: !!veg });
+const MENUS = {
+  b: [
+    M("ข้าวต้มปลาใส่ขิง ผักกวางตุ้ง", "cs", ["ผักกวางตุ้ง ขิง", "ข้าวต้ม 1 ถ้วย", "เนื้อปลา"], "ชิมก่อนปรุง ไม่เติมน้ำปลาเพิ่ม"),
+    M("ไข่ต้ม 2 ฟอง ขนมปังโฮลวีต กล้วยน้ำว้า", "csv", ["กล้วยน้ำว้า 1 ผล", "ขนมปังโฮลวีต 1–2 แผ่น", "ไข่ต้ม 2 ฟอง"], "เตรียมไข่ต้มไว้ล่วงหน้าได้ 2–3 วัน", 1),
+    M("โจ๊กข้าวกล้องใส่ไข่", "cs", ["ขิง ต้นหอม และผลไม้ 1 ส่วน", "โจ๊ก 1 ถ้วย", "ไข่ หมูสับไม่ติดมัน"], "ไม่ใส่ปาท่องโก๋ ปรุงซีอิ๊วไม่เกิน 1 ช้อนชา"),
+    M("ข้าวโอ๊ตนมถั่วเหลืองไม่หวาน ใส่กล้วยหอม", "c", ["กล้วยหอมครึ่งผล", "ข้าวโอ๊ต 4 ช้อนโต๊ะ", "นมถั่วเหลือง ถั่ว 1 กำมือ"], "ไม่เติมน้ำตาล ใช้ความหวานจากผลไม้", 1),
+    M("แซนด์วิชโฮลวีตทูน่า นมจืด", "sv", ["ผักกาดหอม มะเขือเทศ", "ขนมปังโฮลวีต 2 แผ่น", "ทูน่าในน้ำแร่ นมจืด"], "เลือกแบบไม่ราดมายองเนสเยอะ"),
+    M("แซนด์วิชไข่ต้ม โยเกิร์ตรสธรรมชาติ", "sv", ["ผักสลัด ผลไม้ตัด", "ขนมปังโฮลวีต 2 แผ่น", "ไข่ต้ม โยเกิร์ต"], "อ่านฉลาก เลือกโยเกิร์ตน้ำตาลน้อย", 1),
+    M("อกไก่พร้อมกิน มันหวานเผา ผลไม้ตัด", "v", ["ฝรั่งหรือแอปเปิลตัด", "มันหวานเผา 1 หัวเล็ก", "อกไก่พร้อมกิน"], "เลือกอกไก่รสธรรมชาติ โซเดียมต่ำกว่า"),
+    M("ข้าวกล้อง ไข่ตุ๋น ผักลวก", "c", ["ผักลวก 1 ถ้วย", "ข้าวกล้อง 1 ทัพพี", "ไข่ตุ๋น"], "ตุ๋นไข่ด้วยน้ำซุปผัก ไม่ต้องเติมซอส", 1),
+  ],
+  l: [
+    M("กะเพราไก่ ไข่ต้ม ข้าวครึ่งจาน", "s", ["ถั่วฝักยาว ใบกะเพรา แตงกวา", "ข้าวสวยครึ่งจาน", "ไก่สับ ไข่ต้ม"], "บอกร้าน: ไม่หวาน น้ำมันน้อย ขอผักเพิ่ม เปลี่ยนไข่ดาวเป็นไข่ต้ม"),
+    M("ก๋วยเตี๋ยวน้ำใสเส้นหมี่ ลูกชิ้นปลา", "s", ["ถั่วงอก ผักบุ้ง (ขอเพิ่ม)", "เส้นหมี่ 1 ก้อน", "ลูกชิ้นปลา เนื้อปลา"], "ชิมก่อนปรุง และไม่ซดน้ำซุปจนหมด"),
+    M("ข้าวราดแกงส้มผักรวม ไข่ต้ม", "s", ["ผักรวมในแกงส้ม", "ข้าวสวย 1 ทัพพีครึ่ง", "ปลาหรือกุ้ง ไข่ต้ม"], "เลือกแกงไม่ใส่กะทิ คู่กับผัดผัก 1 อย่าง"),
+    M("ส้มตำไทย ไก่ย่างไม่ติดหนัง ข้าวเหนียวครึ่งห่อ", "s", ["มะละกอ ถั่วฝักยาว ผักสด", "ข้าวเหนียวครึ่งห่อ", "ไก่ย่างลอกหนัง"], "บอกร้าน: ไม่หวาน น้ำปลาน้อย ไม่ใส่ผงชูรส"),
+    M("สุกี้น้ำไก่", "s", ["ผักกาดขาว ผักบุ้ง ขึ้นฉ่าย", "วุ้นเส้น 1 กำ", "ไก่ ไข่"], "น้ำจิ้ม 1 ช้อนโต๊ะพอ"),
+    M("ข้าวกล้อง ผัดผักรวมกุ้ง แกงจืดเต้าหู้", "c", ["ผัดผักรวม ผักในแกงจืด", "ข้าวกล้อง 1–2 ทัพพี", "กุ้ง เต้าหู้"], "น้ำมันผัดไม่เกิน 1 ช้อนชาต่อคน"),
+    M("ข้าวกล้อง ปลานึ่งมะนาว ผักลวก", "c", ["ผักลวก 1 ถ้วย", "ข้าวกล้อง 1–2 ทัพพี", "ปลานึ่ง"], "ใช้มะนาว กระเทียม พริก ช่วยชูรสแทนน้ำปลา"),
+    M("ลาบไก่ ผักสด ข้าวเหนียวปั้นเล็ก", "cs", ["ผักสด แตงกวา ถั่วฝักยาว", "ข้าวเหนียว 1 ปั้นเล็ก", "ไก่สับไม่ติดหนัง"], "ปรุงเปรี้ยวนำ เค็มตาม"),
+    M("ข้าวกล้องอกไก่กล่องแช่เย็น กับสลัดผักถ้วย", "v", ["สลัดผัก 1 ถ้วย", "ข้าวกล้องในกล่อง", "อกไก่"], "อ่านฉลาก เลือกโซเดียมไม่เกิน 600 มก. ต่อกล่อง"),
+    M("สลัดอกไก่ น้ำสลัดใส ข้าวโพดต้ม", "v", ["ผักสลัด", "ข้าวโพดต้ม 1 ฝัก", "อกไก่ ไข่ต้ม"], "ใช้น้ำสลัดครึ่งซอง"),
+    M("ผัดผักรวมเต้าหู้ ข้าวกล้อง", "cs", ["ผัดผักรวม", "ข้าวกล้อง 1–2 ทัพพี", "เต้าหู้แข็ง"], "บอกร้าน: น้ำมันน้อย ไม่หวาน", 1),
+    M("ก๋วยเตี๋ยวเจน้ำใส เต้าหู้ เห็ด", "s", ["ผักกาด ถั่วงอก เห็ด", "เส้นหมี่ 1 ก้อน", "เต้าหู้ โปรตีนเกษตร"], "ไม่ซดน้ำซุปจนหมด", 1),
+    M("สลัดไข่ต้ม ถั่วและธัญพืช ขนมปังโฮลวีต", "v", ["ผักสลัด", "ขนมปังโฮลวีต 1 แผ่น", "ไข่ต้ม ถั่ว"], "ใช้น้ำสลัดครึ่งซอง", 1),
+    M("แกงจืดผักรวมเต้าหู้เห็ด ไข่ต้ม ข้าวกล้อง", "c", ["ผักรวม เห็ด", "ข้าวกล้อง 1–2 ทัพพี", "เต้าหู้ ไข่ต้ม"], "ปรุงอ่อน ใช้เห็ดช่วยให้น้ำซุปหอม", 1),
+  ],
+  d: [
+    M("แกงจืดตำลึงเต้าหู้หมูสับ ข้าวกล้อง 1 ทัพพี", "cs", ["ตำลึง ผักกาดขาว", "ข้าวกล้อง 1 ทัพพี", "เต้าหู้ หมูสับไม่ติดมัน"], "มื้อเย็นกินให้เสร็จก่อนนอนอย่างน้อย 3 ชั่วโมง"),
+    M("ปลาเผา ผักต้ม น้ำพริก", "cs", ["ผักต้มหลากสี", "ข้าวสวย 1 ทัพพี", "ปลาเผา"], "จิ้มน้ำพริกแค่ปลายช้อน"),
+    M("น้ำพริกปลาทู ผักต้ม ข้าวกล้อง 1 ทัพพี", "cs", ["ผักต้ม ผักสด", "ข้าวกล้อง 1 ทัพพี", "ปลาทูนึ่ง (ไม่ทอด)"], "เลือกปลาทูนึ่งหรือย่างแทนทอด"),
+    M("ต้มยำปลาน้ำใส ผัดบรอกโคลี", "c", ["บรอกโคลี เห็ด มะเขือเทศ", "ข้าวกล้อง 1 ทัพพี", "เนื้อปลา"], "ไม่ใส่กะทิหรือนมข้น"),
+    M("เกาเหลาหมูใส่ตำลึง ข้าวสวยครึ่งถ้วย", "s", ["ตำลึง ถั่วงอก", "ข้าวสวยครึ่งถ้วย", "หมูเนื้อแดง"], "ไม่ใส่กระเทียมเจียวและน้ำมันเพิ่ม"),
+    M("สลัดทูน่า น้ำสลัดใส", "v", ["ผักสลัดถ้วยใหญ่", "ข้าวโพดหรือขนมปังโฮลวีต 1 แผ่น", "ทูน่าในน้ำแร่"], "ใช้น้ำสลัดครึ่งซอง"),
+    M("ต้มจืดผักกาดขาวไก่สับถ้วยพร้อมกิน ไข่ต้ม", "v", ["ผักกาดขาว", "ข้าวกล้องครึ่งถ้วย", "ไก่สับ ไข่ต้ม"], "ไม่ซดน้ำซุปจนหมดถ้วย"),
+    M("ผัดคะน้าเต้าหู้ ข้าวกล้อง 1 ทัพพี", "cs", ["คะน้า", "ข้าวกล้อง 1 ทัพพี", "เต้าหู้แข็ง"], "ใช้ซอสปรุงรสไม่เกิน 1 ช้อนชา", 1),
+    M("แกงจืดเต้าหู้ไข่ สาหร่าย ผักกาดขาว", "cs", ["ผักกาดขาว สาหร่าย", "ข้าวกล้อง 1 ทัพพี", "เต้าหู้ไข่"], "ปรุงอ่อน ๆ", 1),
+    M("สลัดผัก ไข่ต้ม 2 ฟอง เต้าหู้", "v", ["ผักสลัดถ้วยใหญ่", "ข้าวโพดต้มครึ่งฝัก", "ไข่ต้ม เต้าหู้"], "ใช้น้ำสลัดครึ่งซอง", 1),
+  ],
+};
+const SNACKS = ["ฝรั่งครึ่งผล", "ถั่วอบไม่ปรุงรส 1 กำมือ", "ส้ม 1 ผล", "นมจืดหรือโยเกิร์ตรสธรรมชาติ 1 ถ้วย", "แอปเปิล 1 ผลเล็ก", "ชมพู่ 2 ผล", "กล้วยน้ำว้า 1 ผล"];
+const MIND = [
+  ["หายใจช้า 5 นาที", "หายใจเข้าทางจมูก 4 วินาที ออกทางปากช้า ๆ 6 วินาที ทำตามวงกลมด้านล่าง", 1],
+  ["นั่งนิ่ง ๆ รับรู้ลมหายใจ 10 นาที", "ใจลอยไปก็แค่พากลับมาที่ลมหายใจ ไม่ต้องตำหนิตัวเอง"],
+  ["เดินในที่มีต้นไม้ 10 นาที", "เก็บมือถือ สังเกตเสียง สี และลมรอบตัว"],
+  ["จด 3 เรื่องดี ๆ ของวันนี้", "เรื่องเล็กแค่ไหนก็ได้ เขียนก่อนนอน"],
+  ["ยืดเหยียดคลายตัวก่อนนอน 5 นาที", "คอ บ่า ไหล่ และหลัง ช้า ๆ พร้อมหายใจลึก"],
+  ["ทำสิ่งที่ชอบ 30 นาที", "งานอดิเรก ดนตรี ต้นไม้ หรืออะไรก็ได้ที่ทำแล้วเพลิน"],
+  ["ทบทวนสัปดาห์ 10 นาที", "อะไรทำได้ดี อะไรติดขัด แล้วเลือก 1 อย่างที่จะปรับสัปดาห์หน้า"],
+];
+const FIRST = {
+  food: ["เปลี่ยนเครื่องดื่มหวาน 1 แก้วเป็นน้ำเปล่า", "และเติมผักให้ได้ครึ่งจานในมื้อที่กินประจำ ตามหลักจานอาหาร 2:1:1"],
+  move: ["เดินเร็ว 10 นาทีหลังอาหาร", "ทำวันนี้ได้เลย ไม่ต้องเปลี่ยนชุด แล้วค่อยเพิ่มสัปดาห์ละ 5 นาที"],
+  sleep: ["ตั้งเวลาเข้านอนให้ตรงกันทุกคืน", "วางมือถือให้ห่างเตียง และปิดจอก่อนนอน 30–60 นาที"],
+  mind: ["หายใจช้า 5 นาทีในเวลาเดิมทุกวัน", "ผูกไว้กับกิจวัตรเดิม เช่น หลังแปรงฟัน หรือก่อนเริ่มงาน"],
+  avoid: ["กำหนดวันเริ่มลดหรือเลิกที่ชัดเจน", "บอกคนใกล้ตัวให้ช่วยเชียร์ สายเลิกบุหรี่ 1600 · สายเลิกเหล้า 1413"],
+  social: ["นัดกินข้าวกับคนที่คิดถึง 1 มื้อ", "หรือโทรคุย 10 นาทีในสัปดาห์นี้ โดยวางงานไว้ก่อน"],
+};
+
+/* ================= 4) สร้างแผนรายสัปดาห์ ================= */
+const toMin = t => { const [h, m] = (t || "06:00").split(":").map(Number); return h * 60 + m; };
+const hhmm = m => { m = ((m % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
+function buildPlan(d) {
+  const a = analyze(d), L = a.level, T = +d.time, gentle = L === 0 || d.age >= 60 || a.joint;
+  const avail = (d.days && d.days.length ? d.days : ["0", "1", "2", "3", "4", "5", "6"]).map(Number).sort((x, y) => x - y);
+  let nA = [3, 4, 5][L], nS = 2;
+  if (d.job === "stand" || d.job === "labor") nA--;
+  if (d.ready === "think") { nA = 2; nS = 1; }
+  if (a.caution) nS = 1;
+  const sDays = [...new Set(nS === 1 ? [avail[avail.length >> 1]] : [avail[0], avail[avail.length >> 1]])];
+  const rest = avail.filter(x => !sDays.includes(x)), n = Math.min(nA, rest.length), aDays = [];
+  for (let i = 0; i < n; i++) aDays.push(rest[Math.floor(i * rest.length / n)]);
+  const combo = aDays.length < 2;
+  const aMin = a.caution ? 10 : Math.min(T, [20, 30, 45][L], d.ready === "think" ? 15 : 99);
+  const slot = d.job === "shift" ? "ก่อนเข้ากะ หรือหลังตื่นนอน" : { morning: "ช่วงเช้า หลังตื่นนอน", noon: "ช่วงพักกลางวัน", evening: "หลังเลิกงาน", night: "ช่วงค่ำ (จบก่อนนอนอย่างน้อย 1 ชั่วโมง)" }[d.slot];
+
+  const aeroKey = a.caution ? "walk" : a.joint ? "walk" : d.place === "home" ? (L === 0 ? "march" : "jack") : "walk";
+  const aeroName = a.caution ? "เดินสบาย ๆ ทางราบ" : a.joint ? (d.place === "gym" ? "ปั่นจักรยานอยู่กับที่ หรือเดินในน้ำ" : "เดินทางราบ หรือปั่นจักรยาน") :
+    d.place === "home" ? ["เดินย่ำเท้าอยู่กับที่ตามเพลง", "ก้าวตบ หรือเต้นแอโรบิกตามคลิป", "กระโดดตบสลับวิ่งอยู่กับที่"][L] :
+    d.place === "park" ? ["เดินเร็ว", "เดินเร็วสลับวิ่งเหยาะ", "วิ่งเหยาะ หรือปั่นจักรยาน"][L] : ["เดินบนลู่ หรือปั่นจักรยาน", "ลู่วิ่ง จักรยาน หรือว่ายน้ำ", "วิ่งบนลู่ ว่ายน้ำ หรือคลาสแอโรบิก"][L];
+  let sList = [["squat", "pushup", "bridge", "birddog"], ["squat", "pushup", "row", "bridge", "plank", "birddog"], ["squat", "pushup", "row", "lunge", "bridge", "press", "plank", "birddog"]][L];
+  if (gentle) sList = sList.filter(k => k !== "lunge");
+  const sItem = k => { const e = EX[k], r = e.reps[L]; return { k, name: gentle && e.easy ? `${e.n} (แบบเบา: ${e.easy})` : e.n, dose: e.hold ? `${r[0]} รอบ × ${r[1]}` : `${r[0]} เซต × ${r[1]} ครั้ง` }; };
+  const strength = mins => sList.slice(0, mins <= 10 ? 3 : mins <= 20 ? 4 : mins <= 30 ? 6 : 8).map(sItem);
+  const aero = mins => ({ k: aeroKey, name: aeroName, dose: `${mins} นาที` });
+  const warm = { k: "march", name: "อบอุ่นร่างกาย เดินย่ำเท้า หมุนไหล่", dose: "3–5 นาที" }, cool = { k: "stretch", name: "ยืดเหยียดคลายกล้ามเนื้อ", dose: "3–5 นาที" };
+  const bal = { k: "balance", name: "ยืนขาเดียว ฝึกการทรงตัว", dose: "ข้างละ 10–30 วินาที × 3 รอบ" };
+
+  const pool = key => { let p = MENUS[key].filter(m => m.src.includes(d.foodSrc[0] === "c" && d.foodSrc === "cvs" ? "v" : d.foodSrc[0]) && (d.diet !== "veg" || m.veg)); if (!p.length) p = MENUS[key].filter(m => d.diet !== "veg" || m.veg); return p; };
+  const pools = { b: pool("b"), l: pool("l"), d: pool("d") };
+  const mealPlan = d.job === "shift" ? [["มื้อก่อนเข้ากะ (มื้อหลัก)", "l"], ["มื้อระหว่างกะ (เบา ๆ ก่อนเที่ยงคืน)", "d"], ["มื้อหลังเลิกกะ", "b"]] : [["มื้อเช้า", "b"], ["มื้อกลางวัน", "l"], ["มื้อเย็น", "d"]];
+
+  const wake = toMin(d.wake), bed = wake - 450, shift = d.job === "shift";
+  const sleepTask = shift ? ["นอนทันทีหลังเลิกกะในห้องมืดและเย็น ให้ได้รวม 7 ชั่วโมง", "ใส่แว่นกันแดดตอนกลับบ้าน ปิดม่านทึบ ปิดเสียงมือถือ งีบ 20–30 นาทีก่อนเข้ากะได้ และงดกาแฟ 6 ชั่วโมงก่อนเวลานอน"]
+    : [`เข้านอน ${hhmm(bed)} น. ตื่น ${hhmm(wake)} น.`, `ปิดจอ ${hhmm(bed - 45)} น. · กาแฟแก้วสุดท้ายไม่เกิน ${hhmm(Math.min(bed - 480, 14 * 60))} น.${d.sleepH < 6.5 ? " · ถ้ายังเร็วเกินไป ให้ขยับเวลาเข้านอนเร็วขึ้นคืนละ 15 นาที" : ""}`];
+  const smokeT = ["เลือกวันเลิกบุหรี่ภายใน 2 สัปดาห์ แล้วจดลงปฏิทิน", "โทรสายเลิกบุหรี่ 1600 เพื่อวางแผนกับผู้เชี่ยวชาญ (ฟรี)", "เลื่อนมวนแรกของวันออกไป 30 นาที", "จดว่าอยากสูบตอนไหน กับใคร เพื่อรู้ตัวกระตุ้น", "เมื่ออยากสูบ ให้ดื่มน้ำ หายใจลึก รอ 5 นาที", "เก็บที่เขี่ยบุหรี่และไฟแช็กออกจากบ้านและรถ", "นับเงินที่ประหยัดได้สัปดาห์นี้ แล้วให้รางวัลตัวเอง"];
+  const socDays = d.social === "rare" ? [1, 3, 5] : [2, 6];
+  const socT = { 1: "ทักทายหรือส่งข้อความหาเพื่อนเก่า 1 คน", 2: "โทรหาคนที่คิดถึง 10 นาที", 3: "ชวนเพื่อนร่วมงานหรือเพื่อนบ้านกินข้าวหรือเดินด้วยกัน", 5: "ร่วมกิจกรรมชมรม ชุมชน หรืออาสาสมัครสักครั้ง", 6: "กินข้าวกับครอบครัวหรือเพื่อน โดยวางมือถือ" };
+  const dryDays = d.alcohol === "daily" ? [0, 2, 4] : d.alcohol === "weekly" ? [4, 5] : [];
+  let balLeft = d.age >= 60 ? 3 : 0;
+
+  const week = DAYS.map((_, i) => {
+    const day = { i, tasks: [] };
+    const isS = sDays.includes(i), isA = aDays.includes(i);
+    if (isS && combo) { const h = Math.max(5, Math.floor(T / 2)); day.type = "c"; day.min = T; day.move = { title: "แอโรบิกและฝึกกล้ามเนื้อ", items: [aero(h), ...strength(h <= 10 ? 10 : 20).slice(0, 3), cool] }; }
+    else if (isS) { const m = Math.min(T, [20, 30, 40][L]); day.type = "s"; day.min = m; day.move = { title: "ฝึกกล้ามเนื้อทั้งตัว", items: [warm, ...strength(m), cool] }; }
+    else if (isA) { day.type = "a"; day.min = aMin; day.move = { title: "แอโรบิกระดับปานกลาง", items: [aero(aMin), cool] }; }
+    else { day.type = "l"; day.min = 10; day.move = { title: "ขยับเบา ๆ ในชีวิตประจำวัน", items: [{ k: "walk", name: "เดินหลังอาหาร", dose: "10 นาที" }, { k: "stretch", name: "ยืดเหยียด", dose: "5 นาที" }] }; }
+    if (balLeft && !isS) { day.move.items.push(bal); balLeft--; }
+    day.move.slot = day.type === "l" ? "ทำได้ทุกช่วงของวัน" : slot;
+    day.meals = mealPlan.map(([label, key], j) => ({ label, m: pools[key][(i + j * 2) % pools[key].length] }));
+    day.snack = SNACKS[i];
+    day.sleep = sleepTask;
+    day.mind = MIND[d.stress >= 4 && i % 2 === 0 ? 0 : i];
+    day.extra = [];
+    if (d.job === "desk" && i < 5) day.extra.push(["move", "ลุกยืนยืดเส้นทุก 1 ชั่วโมง ครั้งละ 2–3 นาที", "ตั้งเตือนในมือถือ หรือผูกกับการเติมน้ำดื่ม"]);
+    if (d.job === "labor") day.extra.push(["move", "ยืดหลังและสะโพก 5 นาทีหลังเลิกงาน", "ยกของด้วยการย่อเข่า หลังตรง ถือของชิดลำตัว"]);
+    if (+d.sweet > 0) day.extra.push(["food", i < 4 && +d.sweet > 1 ? "เครื่องดื่มหวานไม่เกิน 1 แก้ว และสั่งหวานน้อย" : "วันนี้ดื่มน้ำเปล่าหรือเครื่องดื่มไม่หวานแทน", "น้ำตาลทั้งวันไม่ควรเกิน 6 ช้อนชา"]);
+    if (d.smoke === "yes") day.extra.push(["avoid", smokeT[i], "ทุกครั้งที่ไม่สูบ คือชัยชนะหนึ่งครั้ง"]);
+    if (dryDays.includes(i)) day.extra.push(["avoid", "วันปลอดแอลกอฮอล์", "เตรียมเครื่องดื่มทดแทนไว้ เช่น โซดามะนาวไม่หวาน ปรึกษาสายเลิกเหล้า 1413 ได้"]);
+    if (socDays.includes(i)) day.extra.push(["social", socT[i], "ความสัมพันธ์ที่ดีคือยาชูกำลังที่ไม่ต้องซื้อ"]);
+    return day;
+  });
+  const aeroCount = aDays.length + (combo ? sDays.length : 0);
+  const base = combo && !aDays.length ? Math.max(5, Math.floor(T / 2)) : aMin;
+  const ladder = [0, 1, 2, 3].map(k => a.caution ? base * aeroCount : Math.min(T, base + 5 * k) * aeroCount);
+  return { a, week, ladder, gentle, sDays };
+}
+
+/* ================= 5) แสดงผล ================= */
+function flower(a) {
+  const R = 78, cx = 150, cy = 140;
+  const petal = (len, w) => `M0,0 C${w},${-len * 0.3} ${w},${-len * 0.85} 0,${-len} C${-w},${-len * 0.85} ${-w},${-len * 0.3} 0,0Z`;
+  let g = "";
+  PILLARS.forEach((p, i) => {
+    const ang = i * 60, v = a.s[p.k], len = 14 + (R - 14) * v / 100, rad = (ang - 90) * Math.PI / 180;
+    const lx = cx + Math.cos(rad) * (R + 26), ly = cy + Math.sin(rad) * (R + 22);
+    g += `<g transform="translate(${cx} ${cy}) rotate(${ang})"><path d="${petal(R, 30)}" style="fill:var(--track)"/><path d="${petal(len, 30 * (0.45 + 0.55 * v / 100))}" style="fill:${pc(p.k)}"/></g>
+      <text x="${lx.toFixed(0)}" y="${ly.toFixed(0)}" text-anchor="middle" style="fill:var(--ink);font-weight:500;font-size:12px">${p.n}</text><text x="${lx.toFixed(0)}" y="${(ly + 14).toFixed(0)}" text-anchor="middle">${v}</text>`;
+  });
+  return `<svg class="flower" viewBox="0 0 300 290" role="img" aria-label="คะแนนวิถีชีวิต 6 เสาหลัก รวม ${a.overall} จาก 100">${g}<circle cx="${cx}" cy="${cy}" r="27" style="fill:var(--card)"/><text class="big" x="${cx}" y="${cy + 7}" text-anchor="middle">${a.overall}</text><text x="${cx}" y="${cy + 21}" text-anchor="middle" style="font-size:9px">จาก 100</text></svg>`;
+}
+const stat = v => v >= 75 ? ["ดี", "good"] : v >= 50 ? ["พอใช้", "warn"] : ["ควรปรับ", "bad"];
+const pill = ([t, c]) => `<span class="pill ${c}">${t}</span>`;
+function plate(m) {
+  return `<svg viewBox="0 0 64 64" role="img" aria-label="สัดส่วนจาน ผักครึ่งจาน ข้าวแป้งหนึ่งส่วน โปรตีนหนึ่งส่วน"><circle cx="32" cy="32" r="31" style="fill:var(--track)"/><circle cx="32" cy="32" r="26" style="fill:var(--card)"/>
+  <path d="M32 8A24 24 0 0 0 32 56Z" style="fill:var(--p-food)"/><path d="M32 8A24 24 0 0 1 56 32H32Z" style="fill:var(--carb)"/><path d="M56 32A24 24 0 0 1 32 56V32Z" style="fill:var(--prot)"/>
+  <path d="M32 8V56M32 32H56" style="stroke:var(--card);stroke-width:2.5"/></svg>`;
+}
+function taskHTML(id, title, sub) {
+  return `<label class="task"><input type="checkbox" id="t-${id}" data-task="${id}" ${state.checks[id] ? "checked" : ""}><div><b style="font-weight:500">${title}</b>${sub ? `<div class="small muted">${sub}</div>` : ""}</div></label>`;
+}
+function dayHTML(plan, i) {
+  const d = plan.week[i], cond = plan.a.cond, mv = d.move;
+  const exs = mv.items.map((it, j) => { const e = EX[it.k]; return `<div class="ex"><svg viewBox="0 0 120 100" data-demo="${it.k}" role="img" aria-label="ภาพสาธิต ${esc(it.name)}"></svg><b>${it.name}</b><span class="dose">${it.dose}</span><details><summary>วิธีทำ</summary><ul>${e.tips.map(t => `<li>${t}</li>`).join("")}</ul></details></div>`; }).join("");
+  const dietNotes = [cond.includes("dm") && "เบาหวาน: ข้าวแป้งไม่เกิน 1 ส่วนของจาน เลือกข้าวกล้อง ผลไม้ไม่หวานจัดครั้งละ 1 ส่วน", (cond.includes("ht") || (plan.a.bp && plan.a.bp[1] !== "good")) && "ความดัน: ไม่ปรุงเพิ่ม เลี่ยงน้ำซุป ของหมักดอง และอาหารแปรรูป", cond.includes("lipid") && "ไขมันสูง: เลี่ยงของทอด กะทิ หนังสัตว์ เครื่องใน เลือกปลาและถั่ว"].filter(Boolean);
+  return `<div class="day">
+    <div class="dayhead"><h2>${DAYFULL[i]}</h2><span class="small muted" id="dayProg"></span></div>
+    <section class="blk" style="--c:${pc("move")}"><h3>${mv.title} · ${d.min} นาที</h3>
+      ${taskHTML(`${i}-mv`, `${mv.slot}`, d.type === "a" || d.type === "c" ? "ความหนักที่พอดี: เหนื่อยพอพูดเป็นประโยคได้ แต่ร้องเพลงไม่ไหว" : d.type === "s" ? "พักระหว่างเซต 45–90 วินาที หายใจออกตอนออกแรง" : "วันพักฟื้น ให้ร่างกายได้ซ่อมแซม แต่ไม่นั่งนิ่งทั้งวัน")}
+      <div class="exs">${exs}</div></section>
+    <section class="blk" style="--c:${pc("food")}"><h3>อาหารวันนี้ · จาน 2:1:1</h3>
+      ${d.meals.map((x, j) => `<div class="meal">${plate(x.m)}<div>${taskHTML(`${i}-m${j}`, `<span class="muted small">${x.label}</span><br>${x.m.n}`, x.m.tip)}
+        <div class="parts"><i style="background:var(--p-food)"></i>${x.m.p[0]} · <i style="background:var(--carb)"></i>${x.m.p[1]} · <i style="background:var(--prot)"></i>${x.m.p[2]}</div></div></div>`).join("")}
+      <p class="small muted">ของว่างถ้าหิว: ${d.snack} · น้ำเปล่า 6–8 แก้ว</p>
+      ${dietNotes.map(n => `<p class="small note">${n}</p>`).join("")}</section>
+    <section class="blk" style="--c:${pc("sleep")}"><h3>การนอน</h3>${taskHTML(`${i}-sl`, d.sleep[0], d.sleep[1])}</section>
+    <section class="blk" style="--c:${pc("mind")}"><h3>ดูแลใจ</h3>${taskHTML(`${i}-mi`, d.mind[0], d.mind[1])}
+      ${d.mind[2] ? `<div class="breath"><div class="ring" aria-hidden="true"></div><span class="small muted">วงกลมขยาย = หายใจเข้า 4 วินาที<br>วงกลมหด = หายใจออก 6 วินาที</span></div>` : ""}</section>
+    ${d.extra.length ? `<section class="blk" style="--c:var(--accent)"><h3>นิสัยเล็ก ๆ ของวันนี้</h3>${d.extra.map((x, j) => `<div style="display:flex;gap:8px;align-items:flex-start"><span class="dot" style="--c:${pc(x[0])};margin-top:9px"></span>${taskHTML(`${i}-x${j}`, x[1], x[2])}</div>`).join("")}</section>` : ""}
+  </div>`;
+}
+let PLAN = null;
+function renderPlan() {
+  const d = state.d, plan = PLAN = buildPlan(d), a = plan.a;
+  const nm = d.name ? `คุณ${esc(d.name)}` : "คุณ";
+  const bmiPos = Math.max(0, Math.min(100, (a.bmi - 15) / 20 * 100));
+  const typeName = { a: "แอโรบิก", s: "ฝึกกล้ามเนื้อ", c: "แอโรบิก + กล้ามเนื้อ", l: "ขยับเบา ๆ" };
+  const tiles = `
+    <div class="tile"><div class="k">ดัชนีมวลกาย (BMI)</div><div class="v">${a.bmi.toFixed(1)}</div>${pill(a.bmiCat)}
+      <div class="scale" aria-hidden="true"><i style="width:17.5%;background:var(--warn)"></i><i style="width:22.5%;background:var(--good)"></i><i style="width:10%;background:var(--warn)"></i><i style="width:50%;background:var(--bad)"></i><b style="left:${bmiPos}%"></b></div><div class="small muted">สมส่วน 18.5–22.9</div></div>
+    <div class="tile"><div class="k">รอบเอว</div>${d.waist ? `<div class="v">${d.waist} <small>ซม.</small></div>${pill(a.waistHigh ? ["เกินเกณฑ์", "bad"] : ["อยู่ในเกณฑ์", "good"])}<div class="small muted">ไม่ควรเกิน ${a.waistMax} ซม. (ส่วนสูงหาร 2)</div>` : `<div class="v">–</div><div class="small muted">วัดรอบเอวระดับสะดือ ไม่ควรเกิน ${a.waistMax} ซม.</div>`}</div>
+    <div class="tile"><div class="k">ความดันโลหิต</div>${a.bp ? `<div class="v">${d.sbp}/${d.dbp}</div>${pill(a.bp)}<div class="small muted">ปกติ ต่ำกว่า 130/85</div>` : `<div class="v">–</div><div class="small muted">วัดฟรีได้ที่ รพ.สต. หรือร้านยาใกล้บ้าน</div>`}</div>
+    ${a.kcal ? `<div class="tile"><div class="k">พลังงานที่ควรได้ต่อวัน</div><div class="v">${a.kcal.toLocaleString()} <small>กิโลแคลอรี</small></div><div class="small muted">โปรตีนราว ${a.protein} กรัม · ค่าประมาณ${d.goal === "weight" && a.bmi >= 23 ? " สำหรับลดน้ำหนักช้า ๆ" : ""}</div></div>` : ""}`;
+  const done = plan.week.map((_, i) => Object.keys(state.checks).filter(k => k.startsWith(i + "-") && state.checks[k]).length);
+  $("#viewPlan").innerHTML = `
+    <section class="panel">
+      <div class="top"><div><h1>แผนสุขภาพดีของ${nm}</h1><p class="muted small">${d.sex === "m" ? "ชาย" : "หญิง"} อายุ ${d.age} ปี · สร้างเมื่อ ${new Date().toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })}${state.isExample ? " · <b>แผนตัวอย่าง</b>" : ""}</p></div>
+        <button type="button" class="btn ghost" id="edit">แก้ข้อมูล</button></div>
+      ${a.caution ? `<p class="note bad"><b>ควรพบแพทย์ก่อนเริ่มออกกำลังกายระดับปานกลางขึ้นไป</b> เพราะข้อมูลของคุณมีจุดที่ต้องประเมินก่อน (อาการขณะออกแรง โรคหัวใจ ตั้งครรภ์ หรือความดันสูงมาก) แผนนี้จึงจัดให้เฉพาะการเดินเบา ๆ ไปก่อน</p>` : ""}
+      <h2>ร่างกายและวิถีชีวิตของคุณตอนนี้</h2>
+      <div class="now"><div>${flower(a)}<p class="small muted" style="text-align:center">กลีบยิ่งยาว ด้านนั้นยิ่งดี</p></div><div class="tiles">${tiles}</div></div>
+      <div>${PILLARS.map(p => `<div class="prow" style="--c:${pc(p.k)}"><span class="nm"><span class="dot"></span>${p.n}</span><span class="bar"><i style="width:${a.s[p.k]}%"></i></span><span class="st">${pill(stat(a.s[p.k]))}</span><span class="fd">${a.find[p.k]}</span></div>`).join("")}</div>
+    </section>
+
+    <section class="panel">
+      <div><h2>ถ้ายังใช้ชีวิตแบบเดิม เสี่ยงอะไร</h2><p class="muted small">ประเมินจากคำตอบของคุณเทียบกับเกณฑ์แนะนำ เป็นแนวโน้มความเสี่ยง ไม่ใช่การวินิจฉัยโรค</p></div>
+      <div class="risks">${a.risks.length ? a.risks.map(r => `<div class="risk"><div class="hd"><h3>${r.t}</h3>${pill(r.lv === 2 ? ["เสี่ยงสูง", "bad"] : ["เสี่ยงปานกลาง", "warn"])}</div><p class="small muted"><span class="dot" style="--c:${pc(r.p)};display:inline-block;margin-right:6px"></span>เพราะ${r.why}</p><p class="gain">ถ้าปรับ: ${r.gain}</p></div>`).join("") : `<p>ยังไม่พบความเสี่ยงเด่นจากข้อมูลที่กรอก รักษาวิถีชีวิตแบบนี้ไว้ และตรวจสุขภาพประจำปีตามวัย</p>`}</div>
+    </section>
+
+    <section class="panel">
+      <div><h2>เริ่มที่ ${a.focus.length || 1} เรื่องนี้ก่อน</h2><p class="muted small">ไม่ต้องเปลี่ยนทุกอย่างพร้อมกัน เลือกจากด้านที่คะแนนน้อยและตรงกับเป้าหมายของคุณ</p></div>
+      <div class="focus">${(a.focus.length ? a.focus : ["move"]).map(k => `<div class="fcard" style="--c:${pc(k)}"><span class="tag"><span class="dot"></span>${P[k].full}</span><h3>${FIRST[k][0]}</h3><p class="small muted">${FIRST[k][1]}</p></div>`).join("")}</div>
+    </section>
+
+    <section class="panel">
+      <div><h2>ตาราง 7 วันของคุณ</h2><p class="muted small">แตะวันเพื่อดูรายละเอียด ติ๊กเมื่อทำเสร็จ จัดตามวันและเวลาที่คุณสะดวก${plan.gentle ? " และใช้ท่าแบบเบาเพื่อถนอมข้อ" : ""}</p></div>
+      <div class="prog" aria-hidden="true"><i id="progBar" style="width:0"></i></div>
+      <div class="strip" role="group" aria-label="เลือกวัน">${plan.week.map((w, i) => `<button type="button" data-day="${i}" aria-pressed="${i === state.day}" aria-label="${DAYFULL[i]} ${typeName[w.type]} ${w.min} นาที"><span class="dn">${DAYS[i]}</span><span class="ty ${w.type}"></span><span class="mn">${w.min} นาที</span></button>`).join("")}</div>
+      <div class="legend"><span><i style="background:var(--p-move)"></i>แอโรบิก</span><span><i style="background:var(--ink);border-color:var(--ink)"></i>ฝึกกล้ามเนื้อ</span><span><i></i>ขยับเบา ๆ</span></div>
+      <div id="dayBox"></div>
+      <details class="more"><summary>ดูตารางรวมทั้งสัปดาห์</summary><div class="tw" style="margin-top:10px"><table>
+        <thead><tr><th>วัน</th><th>ขยับกาย</th><th>เช้า</th><th>กลางวัน</th><th>เย็น</th><th>ดูแลใจ</th></tr></thead>
+        <tbody>${plan.week.map((w, i) => `<tr><th>${DAYS[i]}</th><td>${typeName[w.type]} ${w.min} นาที</td>${w.meals.map(m => `<td>${m.m.n}</td>`).join("")}<td>${w.mind[0]}</td></tr>`).join("")}</tbody></table></div></details>
+    </section>
+
+    <section class="panel">
+      <div><h2>ค่อย ๆ เพิ่มใน 4 สัปดาห์</h2><p class="muted small">นาทีแอโรบิกรวมต่อสัปดาห์ เป้าหมายระยะยาวคือ 150 นาที และฝึกกล้ามเนื้อ 2 วัน</p></div>
+      <div class="ladder">${plan.ladder.map((m, k) => `<div><div class="small muted">สัปดาห์ ${k + 1}</div><div class="v">${m}</div><div class="small muted">นาที</div></div>`).join("")}</div>
+      ${plan.ladder[3] < 150 && !a.caution ? `<p class="small muted">ยังไม่ถึง 150 นาทีก็ได้ประโยชน์แล้ว เมื่อพร้อมให้เพิ่มวัน หรือสะสมครั้งละ 10 นาทีหลายรอบต่อวัน</p>` : ""}
+      <p class="note warn small">หยุดพักทันทีถ้าเจ็บแน่นหน้าอก หน้ามืด ใจสั่น หรือหายใจไม่ทัน และไปพบแพทย์${d.stress >= 4 ? " · ถ้าเครียดจนกระทบการกิน การนอน หรือการทำงาน โทรสายด่วนสุขภาพจิต 1323 ได้ตลอด 24 ชั่วโมง" : ""}</p>
+    </section>
+
+    <section class="panel">
+      <h2>หลักวิชาการที่ใช้จัดแผน</h2>
+      <ul class="refs">
+        <li>กรอบ 6 เสาหลักเวชศาสตร์วิถีชีวิต: อาหาร กิจกรรมทางกาย การนอน การจัดการความเครียด การเลี่ยงสารเสี่ยง และความสัมพันธ์เชิงบวก (กรมอนามัย กระทรวงสาธารณสุข; American College of Lifestyle Medicine)</li>
+        <li>กิจกรรมทางกาย: แอโรบิกระดับปานกลาง 150–300 นาทีต่อสัปดาห์ ฝึกกล้ามเนื้ออย่างน้อย 2 วัน ผู้สูงอายุเพิ่มการทรงตัว และลดการนั่งนาน — <a href="https://pmc.ncbi.nlm.nih.gov/articles/7719906/" target="_blank" rel="noopener">WHO 2020 Guidelines on Physical Activity and Sedentary Behaviour</a> และข้อแนะนำกิจกรรมทางกาย การลดพฤติกรรมเนือยนิ่ง และการนอนหลับ กรมอนามัย</li>
+        <li>อาหาร: จานอาหารสุขภาพ 2:1:1 (ผัก 2 ส่วน ข้าวแป้ง 1 ส่วน เนื้อสัตว์ 1 ส่วน) และน้ำตาล น้ำมัน เกลือ ไม่เกิน 6:6:1 ช้อนชาต่อวัน (สำนักโภชนาการ กรมอนามัย)</li>
+        <li>การนอน: ผู้ใหญ่ควรนอนอย่างน้อย 7 ชั่วโมงต่อคืน — <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4434546/" target="_blank" rel="noopener">AASM/SRS Consensus Statement 2015</a></li>
+        <li>เกณฑ์ร่างกาย: ดัชนีมวลกายสำหรับคนเอเชีย (WHO Asia-Pacific) รอบเอวไม่เกินส่วนสูงหารสอง (กรมอนามัย) ความดันโลหิตตามแนวทางสมาคมความดันโลหิตสูงแห่งประเทศไทย พลังงานประมาณด้วยสมการ Mifflin-St Jeor</li>
+        <li>การปรับพฤติกรรม: เริ่มจากเป้าหมายเล็ก ผูกกับกิจวัตรเดิม และเพิ่มทีละขั้นตามระดับความพร้อม (Transtheoretical Model, COM-B)</li>
+      </ul>
+    </section>`;
+  $("#edit").onclick = () => go("form");
+  showDay(state.day);
+}
+function showDay(i) {
+  state.day = i;
+  document.querySelectorAll(".strip button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.day === i)));
+  $("#dayBox").innerHTML = dayHTML(PLAN, i);
+  drawDemos(1); updateProgress();
+}
+function updateProgress() {
+  const boxes = [...document.querySelectorAll("#dayBox [data-task]")], n = boxes.filter(b => b.checked).length;
+  const dp = $("#dayProg"); if (dp) dp.textContent = `ทำแล้ว ${n} จาก ${boxes.length} อย่าง`;
+  const pb = $("#progBar"); if (pb) pb.style.width = (boxes.length ? n / boxes.length * 100 : 0) + "%";
+}
+$("#viewPlan").addEventListener("click", e => { const b = e.target.closest("[data-day]"); if (b) showDay(+b.dataset.day); });
+$("#viewPlan").addEventListener("change", e => { const t = e.target.dataset.task; if (t) { state.checks[t] = e.target.checked; save(); updateProgress(); } });
+
+/* ภาพสาธิตท่า: หุ่นเส้นขยับไปมาระหว่างท่าเริ่มกับท่าทำ */
+const still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+function drawDemos(t) {
+  document.querySelectorAll("#dayBox svg[data-demo]").forEach(svg => { const e = EX[svg.dataset.demo]; svg.innerHTML = stick(lerp(e.a, e.b, e.b ? t : 0), e.g, e.wt); });
+}
+let last = 0;
+function tick(ts) {
+  if (!$("#viewPlan").hidden && ts - last > 50) { last = ts; drawDemos((1 - Math.cos(ts / 1000 * Math.PI)) / 2); }
+  requestAnimationFrame(tick);
+}
+if (!still) requestAnimationFrame(tick);
+
+/* ================= 6) สลับหน้า ================= */
+function go(view) {
+  if (view === "plan" && validate().length) view = "form";
+  $("#viewForm").hidden = view !== "form"; $("#viewPlan").hidden = view !== "plan";
+  $("#tabForm").setAttribute("aria-pressed", String(view === "form")); $("#tabPlan").setAttribute("aria-pressed", String(view === "plan"));
+  if (view === "plan") renderPlan(); else renderStep();
+  try { if (location.hash !== "#" + view) history.replaceState(null, "", "#" + view); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+$("#tabForm").onclick = () => go("form");
+$("#tabPlan").onclick = () => go("plan");
+window.addEventListener("hashchange", () => go(location.hash === "#plan" ? "plan" : "form"));
+$("#logo").innerHTML = PILLARS.map((p, i) => `<path transform="translate(20 20) rotate(${i * 60})" d="M0,0 C7,-5 7,-14 0,-18 C-7,-14 -7,-5 0,0Z" style="fill:${pc(p.k)}"/>`).join("") + `<circle cx="20" cy="20" r="4" style="fill:var(--bg)"/>`;
+go(location.hash === "#plan" ? "plan" : "form");
+</script>
+</body>
+</html>
