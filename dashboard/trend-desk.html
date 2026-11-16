@@ -155,6 +155,10 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   function seg(key){var cur=(S.status[key]||{}).state;return '<div class="seg" role="group" aria-label="สถานะ">'+STATES.map(function(s){return '<button type="button" data-status="'+esc(key)+'" data-state="'+s[0]+'" aria-pressed="'+(cur===s[0])+'"'+(S.ro?" disabled":"")+'>'+s[1]+'</button>'}).join("")+'</div>'}
   function copybox(label,text){if(!text)return "";return '<div class="copybox"><span><b>'+esc(label)+'</b>'+esc(text)+'</span><button type="button" class="btn" data-copy="'+esc(text)+'">คัดลอก</button></div>'}
   function row(dt,dd){return dd?'<div><dt>'+esc(dt)+'</dt><dd>'+dd+'</dd></div>':""}
+  function gem(text){return '<button type="button" class="btn" data-copy="'+esc(text)+'">คัดลอกคำสั่ง Gemini</button>'}
+  function pNews(n){return 'ออกแบบภาพประชาสัมพันธ์ข่าวสำหรับโพสต์ Facebook ขนาด 1080x1350 พิกเซล\nพาดหัวบนภาพ: '+(n.headline||n.title)+'\nสรุปข่าว: '+(n.summary||"")+'\nแหล่งข่าว: '+(n.source||"")+' '+(n.url||"")+'\nเงื่อนไข: ตัวหนังสือไทยอ่านง่าย โทนสุภาพ ไม่ใช้ภาพบุคคลจริงหรือโลโก้สำนักข่าว ไม่เพิ่มข้อเท็จจริงที่ไม่มีในสรุป\nจากนั้นปรับแคปชันนี้ให้น่าอ่านขึ้นโดยคงข้อเท็จจริงเดิม: '+(n.caption||"")}
+  function pProd(p){return 'เขียนสคริปต์ Reel ขายสินค้า ยาว 30 วินาที สำหรับ Facebook\nสินค้า: '+(p.name||"")+'\nทำไมมาแรง: '+(p.why||"")+'\nมุมคลิป: '+(p.idea||"")+'\nขอ: ประโยคเปิด 3 วินาทีแรก 3 แบบ, ลำดับช็อต, บทพูด, แคปชันที่ไม่ใส่ลิงก์ (ลิงก์อยู่ในคอมเมนต์แรก) และแฮชแท็ก 5 คำ ห้ามอ้างสรรพคุณเกินจริง'}
+  function pTopic(t){return 'เขียนสคริปต์ Reel ยาว 30 วินาที สำหรับ Facebook เพื่อดึงยอดเข้าถึง ไม่ขายของตรง ๆ\nเรื่อง: '+(t.title||"")+'\nสรุป: '+(t.summary||"")+'\nประโยคเปิด: '+(t.hook||"")+'\nมุมเล่า: '+(t.angle||"")+'\nสินค้าที่ผูกได้: '+(t.product||"")+'\nแหล่งข้อมูล: '+(t.url||"")+'\nขอ: ลำดับช็อต, บทพูด, คำถามปิดท้ายให้คนคอมเมนต์ และแคปชัน ใช้เฉพาะข้อเท็จจริงที่ให้ไว้'}
   function src(it){var u=safeUrl(it.url);return u?'<a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(it.source||"แหล่งข่าว")+'</a>':esc(it.source||"")}
   function empty(msg){return '<li class="empty" style="display:block">'+esc(msg)+'</li>'}
 
@@ -176,7 +180,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       var key="d-"+d.id+"-n"+(n.rank||i+1);
       return '<li><div class="rank">'+esc(n.rank||i+1)+'</div><div class="body"><h3>'+esc(n.title)+'</h3>'+
         '<div class="meta">'+(n.category?'<span class="chip">'+esc(n.category)+'</span>':"")+'<span>'+src(n)+'</span></div>'+
-        '<p>'+esc(n.summary)+'</p>'+copybox("พาดหัวบนภาพ",n.headline)+copybox("แคปชันโพสต์",n.caption)+seg(key)+'</div></li>'}).join(""):
+        '<p>'+esc(n.summary)+'</p>'+copybox("พาดหัวบนภาพ",n.headline)+copybox("แคปชันโพสต์",n.caption)+'<div class="row">'+gem(pNews(n))+seg(key)+'</div>'+'</div></li>'}).join(""):
       empty("ยังไม่มีข่าวของวันนี้ ระบบจะเติมรายการให้ทุกเช้า");
 
     $("list-products").innerHTML=w&&(w.products||[]).length?w.products.map(function(p,i){
@@ -185,14 +189,14 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       return '<li><div class="rank">'+esc(p.rank||i+1)+'<span class="mv '+mv+'">'+MOVE[mv]+'</span></div><div class="body"><h3>'+esc(p.name)+'</h3>'+
         '<div class="meta">'+(p.category?'<span class="chip sell">'+esc(p.category)+'</span>':"")+(p.price?'<span>'+esc(p.price)+'</span>':"")+'</div>'+
         '<dl>'+row("ทำไมมาแรง",esc(p.why))+row("มุมคลิปขาย",esc(p.idea))+row("ที่มา",src(p))+'</dl>'+
-        '<div class="row"><a class="btn" href="'+esc(q)+'" target="_blank" rel="noopener">ค้นใน Shopee</a>'+seg(key)+'</div></div></li>'}).join(""):
+        '<div class="row"><a class="btn" href="'+esc(q)+'" target="_blank" rel="noopener">ค้นใน Shopee</a>'+gem(pProd(p))+seg(key)+'</div></div></li>'}).join(""):
       empty("ยังไม่มีอันดับสินค้า ระบบจะจัดอันดับใหม่ทุกเช้าวันจันทร์");
 
     $("list-topics").innerHTML=w&&(w.topics||[]).length?w.topics.map(function(t,i){
       var key="w-"+w.id+"-t"+(t.rank||i+1);
       return '<li><div class="rank">'+esc(t.rank||i+1)+'</div><div class="body"><h3>'+esc(t.title)+'</h3>'+
         '<div class="meta">'+(t.platforms||[]).map(function(x){return '<span class="chip reach">'+esc(x)+'</span>'}).join("")+'<span>'+src(t)+'</span></div>'+
-        '<p>'+esc(t.summary)+'</p><dl>'+row("3 วินาทีแรก",esc(t.hook))+row("มุมเล่า",esc(t.angle))+row("สินค้าที่ผูกได้",esc(t.product))+'</dl>'+seg(key)+'</div></li>'}).join(""):
+        '<p>'+esc(t.summary)+'</p><dl>'+row("3 วินาทีแรก",esc(t.hook))+row("มุมเล่า",esc(t.angle))+row("สินค้าที่ผูกได้",esc(t.product))+'</dl><div class="row">'+gem(pTopic(t))+seg(key)+'</div>'+'</div></li>'}).join(""):
       empty("ยังไม่มีเรื่องมาแรง ระบบจะสรุปใหม่ทุกเช้าวันจันทร์");
 
     $("list-plan").innerHTML=w&&(w.plan||[]).length?w.plan.map(function(p){
@@ -223,14 +227,14 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   document.addEventListener("click",function(ev){
     var b=ev.target.closest("button");if(!b)return;
     if(b.dataset.tab){S.tab=b.dataset.tab;try{localStorage.setItem("td-tab",S.tab)}catch(e){}render();return}
-    if(b.dataset.copy!=null){var txt=b.dataset.copy,done=function(){b.textContent="คัดลอกแล้ว";setTimeout(function(){b.textContent="คัดลอก"},1500)};
+    if(b.dataset.copy!=null){var txt=b.dataset.copy,old=b.textContent,done=function(){b.textContent="คัดลอกแล้ว";setTimeout(function(){b.textContent=old},1500)};
       try{navigator.clipboard.writeText(txt).then(done,function(){sel(b)})}catch(e){sel(b)}return}
     if(b.dataset.status&&S.db){var key=b.dataset.status,st=b.dataset.state,ref=S.db.doc("status/"+key);
       var off=(S.status[key]||{}).state===st;
       (off?ref.delete():ref.set({state:st,at:new Date().toISOString()})).catch(writeFail);return}
     if(b.dataset.del&&S.db){if(b.dataset.armed){S.db.doc("posts/"+b.dataset.del).delete().catch(writeFail)}else{b.dataset.armed="1";b.textContent="ยืนยันลบ"}return}
   });
-  function sel(b){var s=b.parentNode.querySelector("span"),r=document.createRange();r.selectNodeContents(s);var g=getSelection();g.removeAllRanges();g.addRange(r)}
+  function sel(b){var s=b.parentNode.querySelector("span");if(!s){b.textContent="คัดลอกไม่ได้";return}var r=document.createRange();r.selectNodeContents(s);var g=getSelection();g.removeAllRanges();g.addRange(r)}
   $("sel-day").addEventListener("change",function(e){S.day=e.target.value;render()});
   ["sel-week-p","sel-week-t","sel-week-l"].forEach(function(id){$(id).addEventListener("change",function(e){S.week=e.target.value;render()})});
   try{$("post-date").value=new Date().toLocaleDateString("en-CA")}catch(e){}
