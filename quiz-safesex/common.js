@@ -131,7 +131,8 @@
   };
 
   /* ---------- เสียง ---------- */
-  const A = (QZ.audio = { muted: false, volume: 0.7, track: null });
+  const A = (QZ.audio = { muted: false, volume: 1, track: null });
+  const BOOST = 2.6; // ขยายเสียงรวม (มี limiter กันเสียงแตก)
   let ctx, master, musicBus, noiseBuf, timer, nextT, step;
   function ensure() {
     if (ctx) { if (ctx.state === "suspended") ctx.resume(); return true; }
@@ -139,11 +140,13 @@
     if (!AC) return false;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = A.muted ? 0 : A.volume;
-    const comp = ctx.createDynamicsCompressor();
+    master.gain.value = A.muted ? 0 : A.volume * BOOST;
+    const comp = ctx.createDynamicsCompressor(); // ใช้เป็น limiter: เสียงดังขึ้นแต่ไม่แตก
+    comp.threshold.value = -4; comp.knee.value = 2; comp.ratio.value = 20;
+    comp.attack.value = 0.002; comp.release.value = 0.12;
     master.connect(comp).connect(ctx.destination);
     musicBus = ctx.createGain();
-    musicBus.gain.value = 0.55;
+    musicBus.gain.value = 0.8;
     musicBus.connect(master);
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
@@ -151,7 +154,8 @@
     return true;
   }
   A.unlock = ensure;
-  A.setMuted = (m) => { A.muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : A.volume, ctx.currentTime, 0.05); };
+  A.setMuted = (m) => { A.muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : A.volume * BOOST, ctx.currentTime, 0.05); };
+  A.setVolume = (v) => { A.volume = Math.max(0, Math.min(1.5, +v || 0)); A.setMuted(A.muted); };
   const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
   function tone(m, t, dur, { type = "triangle", gain = 0.2, out, attack = 0.005, slide } = {}) {
     const o = ctx.createOscillator(), g = ctx.createGain();
@@ -222,7 +226,7 @@
     step = 0;
     nextT = ctx.currentTime + 0.08;
     musicBus.gain.cancelScheduledValues(ctx.currentTime);
-    musicBus.gain.setValueAtTime(0.55, ctx.currentTime);
+    musicBus.gain.setValueAtTime(0.8, ctx.currentTime);
     timer = setInterval(() => {
       const st = 60 / tr.bpm / 4;
       while (nextT < ctx.currentTime + 0.15) { playStep(tr, step++, nextT); nextT += st; }

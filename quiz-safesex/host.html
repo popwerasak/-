@@ -116,6 +116,10 @@ td.num,th.num{text-align:right}
           <select id="selTime"><option value="10">10 วินาที</option><option value="15">15 วินาที</option><option value="20">20 วินาที</option><option value="30">30 วินาที</option><option value="45">45 วินาที</option></select>
         </div>
         <div class="row"><label><input type="checkbox" id="chkMusic" checked> เปิดดนตรีประกอบ</label></div>
+        <div class="row"><label for="volRange">🔊 ระดับเสียง</label>
+          <input type="range" id="volRange" min="0" max="150" step="5" value="100" style="flex:1;min-width:160px;accent-color:#ff2e7e">
+          <span id="volTxt" style="min-width:3.5em;text-align:right">100%</span>
+          <button class="btn" id="btnVolTest" type="button" style="padding:8px 14px;font-size:1rem">ทดสอบเสียง</button></div>
         <p class="muted" style="margin:6px 0 14px" id="qInfo"></p>
         <button class="btn pink big" id="btnCreate" style="width:100%">🎮 สร้างห้องเกม</button>
         <p class="muted hidden" id="setupMsg" style="margin:12px 0 0"></p>
@@ -242,7 +246,7 @@ td.num,th.num{text-align:right}
   document.title = QUIZ.title + " · หน้าครู";
   $("ttl").textContent = $("heroTitle").textContent = QUIZ.title;
   $("heroSub").textContent = QUIZ.subtitle;
-  $("qInfo").textContent = `คำถาม ${Q.length} ข้อ · แบบตัวเลือก (ก ข ค ง / จริง–เท็จ)`;
+  $("qInfo").textContent = `คำถาม ${Q.length} ข้อ · แบบตัวเลือก (A B C D / จริง–เท็จ)`;
   $("selTime").value = String(QUIZ.timeLimit);
 
   /* ---------- ตัวช่วย ---------- */
@@ -270,6 +274,10 @@ td.num,th.num{text-align:right}
   /* ---------- เสียง ---------- */
   const musicOn = () => $("chkMusic").checked;
   const music = (n) => (musicOn() ? A.music(n) : A.stopMusic());
+  const setVol = (v) => { A.setVolume(v / 100); $("volRange").value = v; $("volTxt").textContent = v + "%"; QZ.store.set("ssq-host-vol", +v); };
+  setVol(QZ.store.get("ssq-host-vol") ?? 100);
+  $("volRange").oninput = () => setVol($("volRange").value);
+  $("btnVolTest").onclick = () => { A.unlock(); A.sfx("correct"); };
   $("btnMute").onclick = () => { A.setMuted(!A.muted); $("btnMute").textContent = A.muted ? "🔇" : "🔊"; };
   $("btnFull").onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.());
 
